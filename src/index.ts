@@ -84,7 +84,6 @@ export function parseLine(
       const type = lookupOperandType(value);
       type && operands.push({ type, value });
     });
-
     if (operands.length >= 2) {
       statement.dest = operands[1];
       statement.source = operands[0];

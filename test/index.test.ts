@@ -1,6 +1,6 @@
 import fs from "fs";
 import { OperandType } from "../src/operands";
-import { SIZE_L, SIZE_NA, SIZE_W } from "../src/instructions";
+import { Size } from "../src/instructions";
 import parse, {
   calcN,
   evalImmediate,
@@ -22,7 +22,7 @@ describe("parse()", () => {
         text: "         MOVE.W  #1,d0 ; Comment",
         statement: {
           instruction: "MOVE",
-          size: SIZE_W,
+          size: Size.W,
           n: 1,
           source: { value: "#1", type: OperandType.Immediate },
           dest: { value: "d0", type: OperandType.DirectData },
@@ -34,7 +34,7 @@ describe("parse()", () => {
         text: "         MOVE.W  d0,d1",
         statement: {
           instruction: "MOVE",
-          size: SIZE_W,
+          size: Size.W,
           source: { value: "d0", type: OperandType.DirectData },
           dest: { value: "d1", type: OperandType.DirectData },
         },
@@ -56,7 +56,7 @@ describe("parseLine()", () => {
       text,
       statement: {
         instruction: "MOVE",
-        size: SIZE_W,
+        size: Size.W,
         n: 1,
         source: { value: "#1", type: OperandType.Immediate },
         dest: { value: "d0", type: OperandType.DirectData },
@@ -71,7 +71,7 @@ describe("parseLine()", () => {
       text,
       statement: {
         instruction: "MOVE",
-        size: SIZE_W,
+        size: Size.W,
         n: 1,
         source: { value: "#1", type: OperandType.Immediate },
         dest: { value: "d0", type: OperandType.DirectData },
@@ -86,7 +86,7 @@ describe("parseLine()", () => {
       text,
       statement: {
         instruction: "MOVE",
-        size: SIZE_W,
+        size: Size.W,
         n: 1,
         source: { value: "#1", type: OperandType.Immediate },
         dest: { value: "D0", type: OperandType.DirectData },
@@ -101,7 +101,7 @@ describe("parseLine()", () => {
       text,
       statement: {
         instruction: "MOVE",
-        size: SIZE_W,
+        size: Size.W,
         n: 1,
         source: { value: "#1", type: OperandType.Immediate },
         dest: { value: "d0", type: OperandType.DirectData },
@@ -117,7 +117,7 @@ describe("parseLine()", () => {
       label: "l0",
       statement: {
         instruction: "MOVE",
-        size: SIZE_W,
+        size: Size.W,
         n: 1,
         source: { value: "#1", type: OperandType.Immediate },
         dest: { value: "d0", type: OperandType.DirectData },
@@ -133,7 +133,7 @@ describe("parseLine()", () => {
       label: "l0",
       statement: {
         instruction: "MOVE",
-        size: SIZE_W,
+        size: Size.W,
         n: 1,
         source: { value: "#1", type: OperandType.Immediate },
         dest: { value: "d0", type: OperandType.DirectData },
@@ -148,7 +148,7 @@ describe("parseLine()", () => {
       text,
       statement: {
         instruction: "MOVE",
-        size: SIZE_W,
+        size: Size.W,
         n: 1,
         source: { value: "#1", type: OperandType.Immediate },
         dest: { value: "d0", type: OperandType.DirectData },
@@ -163,7 +163,7 @@ describe("parseLine()", () => {
       text,
       statement: {
         instruction: "BCS",
-        size: SIZE_W,
+        size: Size.W,
         dest: {
           type: OperandType.AbsoluteL,
           value: "someLabel",
@@ -182,7 +182,7 @@ describe("parseLine()", () => {
       text,
       statement: {
         instruction: "CLR",
-        size: SIZE_W,
+        size: Size.W,
         dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 4, read: 1, write: 0 },
@@ -195,7 +195,7 @@ describe("parseLine()", () => {
       text,
       statement: {
         instruction: "MOVEQ",
-        size: SIZE_L,
+        size: Size.L,
         n: 1,
         source: { value: "#1", type: OperandType.Immediate },
         dest: { value: "d0", type: OperandType.DirectData },
@@ -210,7 +210,7 @@ describe("parseLine()", () => {
       text,
       statement: {
         instruction: "RTS",
-        size: SIZE_NA,
+        size: Size.NA,
       },
       timings: { clock: 16, read: 4, write: 0 },
     });

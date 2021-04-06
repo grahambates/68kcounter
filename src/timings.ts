@@ -1,6 +1,6 @@
 import { Statement } from ".";
 import { OperandType } from "./operands";
-import { Instruction, InstructionSize } from "./instructions";
+import { Instruction, Size } from "./instructions";
 
 /**
  * Describes timing information for a given instruction
@@ -14,8 +14,8 @@ export interface Timing {
 /**
  * Look up timing information for a parsed operation
  */
-export function lookupTiming(op: Statement): Timing | Timing[] | null {
-  const { instruction, size, source, dest } = op;
+export function lookupTiming(stmt: Statement): Timing | Timing[] | null {
+  const { instruction, size, source, dest } = stmt;
   const instructionTiming = instructionTimings[instruction];
 
   // Convert operands list to string for use as key
@@ -28,14 +28,14 @@ export function lookupTiming(op: Statement): Timing | Timing[] | null {
   // Try specified / default size:
   const sizeTiming = instructionTiming[size];
   if (sizeTiming && sizeTiming[key]) {
-    return applyNMultiple(sizeTiming[key], op.n);
+    return applyNMultiple(sizeTiming[key], stmt.n);
   }
 
   // Use first matching size if specified size/operands aren't found in table:
   for (const s in instructionTiming) {
-    const sizeTiming = instructionTiming[s as InstructionSize];
+    const sizeTiming = instructionTiming[s as Size];
     if (sizeTiming && sizeTiming[key]) {
-      return applyNMultiple(sizeTiming[key], op.n);
+      return applyNMultiple(sizeTiming[key], stmt.n);
     }
   }
   return null;
@@ -787,7 +787,7 @@ const movemL: TimingMap = {
   "d(PC,ix),RegList": timing(18, 4, 0, { nClock: 8, nRead: 2 }),
 };
 
-type SizeTimings = Partial<Record<InstructionSize, TimingMap>>;
+type SizeTimings = Partial<Record<Size, TimingMap>>;
 type InstructionTimings = Record<Instruction, SizeTimings>;
 
 /**

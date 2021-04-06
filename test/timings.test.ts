@@ -1,12 +1,13 @@
 import { applyN, lookupTiming } from "../src/timings";
 import { OperandType } from "../src/operands";
 import { Statement } from "../src";
+import { Size } from "../src/instructions";
 
 describe("lookupTiming", () => {
   test("move.w d0,d1", () => {
     const stmt: Statement = {
       instruction: "MOVE",
-      size: "W",
+      size: Size.W,
       source: { value: "d0", type: OperandType.DirectData },
       dest: { value: "d1", type: OperandType.DirectData },
     };
@@ -16,7 +17,7 @@ describe("lookupTiming", () => {
   test("add.w (a0),d1", () => {
     const stmt: Statement = {
       instruction: "ADD",
-      size: "W",
+      size: Size.W,
       source: { value: "(a0)", type: OperandType.Indirect },
       dest: { value: "d1", type: OperandType.DirectData },
     };
@@ -26,7 +27,7 @@ describe("lookupTiming", () => {
   test("bsr.w foo", () => {
     const stmt: Statement = {
       instruction: "BSR",
-      size: "W",
+      size: Size.W,
       dest: { value: "foo", type: OperandType.AbsoluteL },
     };
     expect(lookupTiming(stmt)).toEqual({ clock: 18, read: 2, write: 2 });

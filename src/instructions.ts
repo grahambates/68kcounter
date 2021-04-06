@@ -101,34 +101,34 @@ export type Instruction =
   | "TST"
   | "UNLK";
 
-export type InstructionSize = "B" | "W" | "L" | "NA";
+export enum Size {
+  B = "B",
+  W = "W",
+  L = "L",
+  // Need a string value for unsized as we use it as a key
+  NA = "NA",
+}
 
-export const SIZE_B: InstructionSize = "B";
-export const SIZE_W: InstructionSize = "W";
-export const SIZE_L: InstructionSize = "L";
-// Need a string value for unsized as we use it as a key
-export const SIZE_NA: InstructionSize = "NA";
-
-const b: InstructionSize[] = [SIZE_B];
-const w: InstructionSize[] = [SIZE_W];
-const l: InstructionSize[] = [SIZE_L];
-const bwl: InstructionSize[] = [SIZE_W, SIZE_B, SIZE_L]; // Default first
-const bw: InstructionSize[] = [SIZE_W, SIZE_B]; // Default first
-const wl: InstructionSize[] = [SIZE_W, SIZE_L];
-const bl: InstructionSize[] = [SIZE_B, SIZE_L];
-const na: InstructionSize[] = [SIZE_NA];
+const b: Size[] = [Size.B];
+const w: Size[] = [Size.W];
+const l: Size[] = [Size.L];
+const bwl: Size[] = [Size.W, Size.B, Size.L]; // Default first
+const bw: Size[] = [Size.W, Size.B]; // Default first
+const wl: Size[] = [Size.W, Size.L];
+const bl: Size[] = [Size.B, Size.L];
+const na: Size[] = [Size.NA];
 
 /**
  * Check if string is a valid instruction size
  */
-export function isInstructionSize(v: string): v is InstructionSize {
-  return [SIZE_B, SIZE_W, SIZE_L, SIZE_NA].includes(v as InstructionSize);
+export function isInstructionSize(v: string): v is Size {
+  return [Size.B, Size.W, Size.L, Size.NA].includes(v as Size);
 }
 
 /**
  * List instructions and their supported sizes.
  */
-export const instructions: Record<Instruction, InstructionSize[]> = {
+export const instructions: Record<Instruction, Size[]> = {
   ABCD: b,
   ADD: bwl,
   ADDQ: bwl,
