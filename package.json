@@ -1,6 +1,6 @@
 {
   "name": "68kcounter",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "68000 ASM source code cycle counter",
   "scripts": {
     "test": "jest",
@@ -10,7 +10,9 @@
     "prepare": "husky install"
   },
   "main": "dist/index.js",
-  "bin": "dist/cli.js",
+  "bin": {
+    "68kcounter": "dist/cli.js"
+  },
   "author": "Graham Bates <hello@grahambates.com>",
   "license": "MIT",
   "repository": {

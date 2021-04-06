@@ -1,6 +1,6 @@
 import { Parser } from "expr-eval";
 import { lookupTiming, Timing } from "./timings";
-import { lookupArgType, Arg, ArgType } from "./args";
+import { lookupOperandType, Operand, OperandType } from "./operands";
 import {
   instructions,
   isInstruction,
@@ -13,14 +13,14 @@ import {
 export interface Line {
   text: string;
   label?: string;
-  op?: Op;
+  statement?: Statement;
   timings?: Timing | Timing[] | null;
 }
 
-export interface Op {
+export interface Statement {
   instruction: Instruction;
   size: InstructionSize;
-  args: Arg[];
+  operands: Operand[];
   n?: number;
 }
 
@@ -71,32 +71,29 @@ export function parseLine(
     return { text };
   }
 
-  // Args:
-  const args: Arg[] = [];
+  // Operands:
+  const operands: Operand[] = [];
   if (parts[2]) {
-    const argsSplit = splitParams(parts[2]);
-    for (const value of argsSplit) {
-      const type = lookupArgType(value);
-      if (type) {
-        args.push({ type, value });
-      }
-    }
+    splitOperands(parts[2]).forEach((value) => {
+      const type = lookupOperandType(value);
+      type && operands.push({ type, value });
+    });
   }
 
-  const op: Op = {
+  const op: Statement = {
     instruction,
     size,
-    args,
-    n: calcN(args, vars),
+    operands,
+    n: calcN(operands, vars),
   };
 
-  return { text, label, op, timings: lookupTiming(op) };
+  return { text, label, statement: op, timings: lookupTiming(op) };
 }
 
 /**
- * Split parameters on comma, ignoring any inside parentheses.
+ * Split operands on comma, ignoring any inside parentheses.
  */
-export function splitParams(text: string): string[] {
+export function splitOperands(text: string): string[] {
   let parens = 0;
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
@@ -112,20 +109,20 @@ export function splitParams(text: string): string[] {
 }
 
 /**
- * Calculate timing n value from a set of args.
+ * Calculate timing n value from a set of operands.
  *
- * @param args Arguments list
+ * @param operands Operand list
  * @param vars Optional variables to substitute in immediate expressions
  */
 export function calcN(
-  args: Arg[],
+  operands: Operand[],
   vars: Record<string, number> = {}
 ): number | undefined {
-  const range = args.find((a) => a.type === ArgType.RegList);
+  const range = operands.find((a) => a.type === OperandType.RegList);
   if (range) {
     return rangeN(range.value);
   }
-  const immediate = args.find((a) => a.type === ArgType.Immediate);
+  const immediate = operands.find((a) => a.type === OperandType.Immediate);
   if (immediate) {
     return evalImmediate(immediate.value, vars);
   }
@@ -145,7 +142,7 @@ export function rangeN(range: string): number {
 }
 
 /**
- * Try to evaluate immediate arg text to a number
+ * Try to evaluate immediate operand text to a number
  *
  * @param val Text value
  * @param vars Optional variables to substitute in expression

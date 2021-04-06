@@ -1,5 +1,5 @@
-import { Op } from ".";
-import { ArgType } from "./args";
+import { Statement } from ".";
+import { OperandType } from "./operands";
 import { Instruction, InstructionSize } from "./instructions";
 
 /**
@@ -14,24 +14,24 @@ export interface Timing {
 /**
  * Look up timing information for a parsed operation
  */
-export function lookupTiming(op: Op): Timing | Timing[] | null {
-  const { instruction, size, args } = op;
+export function lookupTiming(op: Statement): Timing | Timing[] | null {
+  const { instruction, size, operands } = op;
   const instructionTiming = instructionTimings[instruction];
 
-  // Convert args list to string for use as key
-  const argStr = args.map((a) => a.type).join(",") || NO_ARGS;
+  // Convert operands list to string for use as key
+  const key = operands.map((o) => o.type).join(",") || NONE;
 
   // Try specified / default size:
   const sizeTiming = instructionTiming[size];
-  if (sizeTiming && sizeTiming[argStr]) {
-    return applyNMultiple(sizeTiming[argStr], op.n);
+  if (sizeTiming && sizeTiming[key]) {
+    return applyNMultiple(sizeTiming[key], op.n);
   }
 
-  // Use first matching size if specified size/args aren't found in table:
+  // Use first matching size if specified size/operands aren't found in table:
   for (const s in instructionTiming) {
     const sizeTiming = instructionTiming[s as InstructionSize];
-    if (sizeTiming && sizeTiming[argStr]) {
-      return applyNMultiple(sizeTiming[argStr], op.n);
+    if (sizeTiming && sizeTiming[key]) {
+      return applyNMultiple(sizeTiming[key], op.n);
     }
   }
   return null;
@@ -60,7 +60,7 @@ type TimingNOpts = {
  * Apply n multipliers to return a simple timing object
  *
  * @param timing timing object with optional n multipliers
- * @param n Value from args which can influence the total timings
+ * @param n Value from operands which can influence the total timings
  */
 export function applyN(timing: TimingN, n: number): Timing {
   let { clock, read, write } = timing;
@@ -96,8 +96,8 @@ function applyNMultiple(
  */
 type TimingMap = Record<string, TimingN | TimingN[]>;
 
-// Value to use for key in TimingMap for instructions with no args
-const NO_ARGS = "<none>";
+// Value to use for key in TimingMap for instructions with no operands
+const NONE = "<none>";
 
 /**
  * Factory function for timing info
@@ -138,54 +138,54 @@ enum EaSize {
 }
 
 const eaMem: Record<string, EaTimings> = {
-  [ArgType.Indirect]: {
+  [OperandType.Indirect]: {
     wordByte: timing(4, 1, 0),
     long: timing(8, 2, 0),
   },
-  [ArgType.IndirectPost]: {
+  [OperandType.IndirectPost]: {
     wordByte: timing(4, 1, 0),
     long: timing(8, 2, 0),
   },
-  [ArgType.IndirectPre]: {
+  [OperandType.IndirectPre]: {
     wordByte: timing(6, 1, 0),
     long: timing(10, 2, 0),
   },
-  [ArgType.IndirectDisp]: {
+  [OperandType.IndirectDisp]: {
     wordByte: timing(8, 2, 0),
     long: timing(12, 3, 0),
   },
-  [ArgType.IndirectIx]: {
+  [OperandType.IndirectIx]: {
     wordByte: timing(10, 2, 0),
     long: timing(14, 3, 0),
   },
-  [ArgType.IndirectPcDisp]: {
+  [OperandType.IndirectPcDisp]: {
     wordByte: timing(8, 2, 0),
     long: timing(12, 3, 0),
   },
-  [ArgType.IndirectPcIx]: {
+  [OperandType.IndirectPcIx]: {
     wordByte: timing(10, 2, 0),
     long: timing(14, 3, 0),
   },
-  [ArgType.AbsoluteW]: {
+  [OperandType.AbsoluteW]: {
     wordByte: timing(8, 2, 0),
     long: timing(12, 3, 0),
   },
-  [ArgType.AbsoluteL]: {
+  [OperandType.AbsoluteL]: {
     wordByte: timing(12, 3, 0),
     long: timing(16, 4, 0),
   },
 };
 
 const eaDirectImmediate: Record<string, EaTimings> = {
-  [ArgType.DirectData]: {
+  [OperandType.DirectData]: {
     wordByte: timing(0, 0, 0),
     long: timing(0, 0, 0),
   },
-  [ArgType.DirectAddr]: {
+  [OperandType.DirectAddr]: {
     wordByte: timing(0, 0, 0),
     long: timing(0, 0, 0),
   },
-  [ArgType.Immediate]: {
+  [OperandType.Immediate]: {
     wordByte: timing(4, 1, 0),
     long: timing(8, 2, 0),
   },
@@ -201,49 +201,49 @@ const eaAll: Record<string, EaTimings> = {
 // groups for Memory vs. Direct or Immediate types as these can have a different
 // base value.
 
-const singleMem = (base: Timing, size: EaSize = EaSize.WordByte): TimingMap =>
+const unaryMem = (base: Timing, size: EaSize = EaSize.WordByte): TimingMap =>
   Object.keys(eaMem).reduce((acc, k) => {
     acc[k] = addTimings(eaMem[k][size], base);
     return acc;
   }, {} as TimingMap);
 
-const fromEa = (
+const sourceEa = (
   base: Timing,
-  secondArg: ArgType,
+  dest: OperandType,
   size: EaSize = EaSize.WordByte
 ): TimingMap =>
   Object.keys(eaAll).reduce((acc, k) => {
-    acc[k + "," + secondArg] = addTimings(eaAll[k][size], base);
+    acc[k + "," + dest] = addTimings(eaAll[k][size], base);
     return acc;
   }, {} as TimingMap);
 
-const fromMem = (
+const sourceMem = (
   base: Timing,
-  secondArg: ArgType,
+  dest: OperandType,
   size: EaSize = EaSize.WordByte
 ) =>
   Object.keys(eaMem).reduce((acc, k) => {
-    acc[k + "," + secondArg] = addTimings(eaMem[k][size], base);
+    acc[k + "," + dest] = addTimings(eaMem[k][size], base);
     return acc;
   }, {} as TimingMap);
 
-const fromDirectImmediate = (
+const sourceDirectImmediate = (
   base: Timing,
-  secondArg: ArgType,
+  dest: OperandType,
   size: EaSize = EaSize.WordByte
 ) =>
   Object.keys(eaDirectImmediate).reduce((acc, k) => {
-    acc[k + "," + secondArg] = addTimings(eaDirectImmediate[k][size], base);
+    acc[k + "," + dest] = addTimings(eaDirectImmediate[k][size], base);
     return acc;
   }, {} as TimingMap);
 
-const toMem = (
+const destMem = (
   base: Timing,
-  firstArg: ArgType,
+  source: OperandType,
   size: EaSize = EaSize.WordByte
 ) =>
   Object.keys(eaMem).reduce((acc, k) => {
-    acc[firstArg + "," + k] = addTimings(eaMem[k][size], base);
+    acc[source + "," + k] = addTimings(eaMem[k][size], base);
     return acc;
   }, {} as TimingMap);
 
@@ -471,83 +471,99 @@ const moveL: TimingMap = {
 };
 
 const addSubBW: TimingMap = {
-  ...fromEa(timing(8, 1, 0), ArgType.DirectAddr),
-  ...fromEa(timing(4, 1, 0), ArgType.DirectData),
-  ...toMem(timing(8, 1, 1), ArgType.DirectData),
+  ...sourceEa(timing(8, 1, 0), OperandType.DirectAddr),
+  ...sourceEa(timing(4, 1, 0), OperandType.DirectData),
+  ...destMem(timing(8, 1, 1), OperandType.DirectData),
   "#xxx,Dn": timing(8, 2, 0),
-  ...toMem(timing(12, 2, 1), ArgType.Immediate),
+  ...destMem(timing(12, 2, 1), OperandType.Immediate),
 };
 const addSubL: TimingMap = {
-  ...fromMem(timing(6, 1, 0), ArgType.DirectAddr, EaSize.Long),
-  ...fromMem(timing(6, 1, 0), ArgType.DirectData, EaSize.Long),
-  ...fromDirectImmediate(timing(8, 1, 0), ArgType.DirectAddr, EaSize.Long),
-  ...fromDirectImmediate(timing(8, 1, 0), ArgType.DirectData, EaSize.Long),
-  ...toMem(timing(12, 1, 2), ArgType.DirectData, EaSize.Long),
+  ...sourceMem(timing(6, 1, 0), OperandType.DirectAddr, EaSize.Long),
+  ...sourceMem(timing(6, 1, 0), OperandType.DirectData, EaSize.Long),
+  ...sourceDirectImmediate(
+    timing(8, 1, 0),
+    OperandType.DirectAddr,
+    EaSize.Long
+  ),
+  ...sourceDirectImmediate(
+    timing(8, 1, 0),
+    OperandType.DirectData,
+    EaSize.Long
+  ),
+  ...destMem(timing(12, 1, 2), OperandType.DirectData, EaSize.Long),
   "#xxx,Dn": timing(16, 3, 0),
-  ...toMem(timing(20, 3, 2), ArgType.Immediate, EaSize.Long),
+  ...destMem(timing(20, 3, 2), OperandType.Immediate, EaSize.Long),
 };
 
 const andOrBW: TimingMap = {
-  ...fromEa(timing(4, 1, 0), ArgType.DirectData),
-  ...toMem(timing(8, 1, 1), ArgType.DirectData),
+  ...sourceEa(timing(4, 1, 0), OperandType.DirectData),
+  ...destMem(timing(8, 1, 1), OperandType.DirectData),
   "#xxx,Dn": timing(8, 2, 0),
-  ...toMem(timing(12, 2, 1), ArgType.Immediate),
+  ...destMem(timing(12, 2, 1), OperandType.Immediate),
 };
 const andL: TimingMap = {
-  ...fromMem(timing(6, 1, 0), ArgType.DirectData, EaSize.Long),
-  ...fromDirectImmediate(timing(8, 1, 0), ArgType.DirectData, EaSize.Long),
-  ...toMem(timing(12, 1, 2), ArgType.DirectData, EaSize.Long),
+  ...sourceMem(timing(6, 1, 0), OperandType.DirectData, EaSize.Long),
+  ...sourceDirectImmediate(
+    timing(8, 1, 0),
+    OperandType.DirectData,
+    EaSize.Long
+  ),
+  ...destMem(timing(12, 1, 2), OperandType.DirectData, EaSize.Long),
   "#xxx,Dn": timing(16, 3, 0),
-  ...toMem(timing(20, 3, 1), ArgType.Immediate, EaSize.Long),
+  ...destMem(timing(20, 3, 1), OperandType.Immediate, EaSize.Long),
 };
 const orL: TimingMap = {
-  ...fromMem(timing(6, 1, 0), ArgType.DirectData, EaSize.Long),
-  ...fromDirectImmediate(timing(8, 1, 0), ArgType.DirectData, EaSize.Long),
-  ...toMem(timing(12, 1, 2), ArgType.DirectData, EaSize.Long),
+  ...sourceMem(timing(6, 1, 0), OperandType.DirectData, EaSize.Long),
+  ...sourceDirectImmediate(
+    timing(8, 1, 0),
+    OperandType.DirectData,
+    EaSize.Long
+  ),
+  ...destMem(timing(12, 1, 2), OperandType.DirectData, EaSize.Long),
   "#xxx,Dn": timing(16, 3, 0),
-  ...toMem(timing(20, 3, 2), ArgType.Immediate, EaSize.Long),
+  ...destMem(timing(20, 3, 2), OperandType.Immediate, EaSize.Long),
 };
 
 const eorBW: TimingMap = {
   Dn: timing(4, 1, 0),
-  ...toMem(timing(8, 1, 1), ArgType.DirectData),
+  ...destMem(timing(8, 1, 1), OperandType.DirectData),
   "#xxx,Dn": timing(8, 2, 0),
-  ...toMem(timing(12, 1, 0), ArgType.Immediate),
+  ...destMem(timing(12, 1, 0), OperandType.Immediate),
 };
 const eorL: TimingMap = {
   Dn: timing(8, 1, 0),
-  ...toMem(timing(12, 1, 2), ArgType.DirectData),
+  ...destMem(timing(12, 1, 2), OperandType.DirectData),
   "#xxx,Dn": timing(16, 3, 0),
-  ...toMem(timing(20, 3, 2), ArgType.Immediate, EaSize.Long),
+  ...destMem(timing(20, 3, 2), OperandType.Immediate, EaSize.Long),
 };
 
 const cmpBW: TimingMap = {
-  ...fromEa(timing(6, 1, 0), ArgType.DirectAddr),
-  ...fromEa(timing(4, 1, 0), ArgType.DirectData),
+  ...sourceEa(timing(6, 1, 0), OperandType.DirectAddr),
+  ...sourceEa(timing(4, 1, 0), OperandType.DirectData),
   "#xxx,Dn": timing(8, 2, 0),
-  ...toMem(timing(8, 2, 0), ArgType.Immediate),
+  ...destMem(timing(8, 2, 0), OperandType.Immediate),
 };
 const cmpL: TimingMap = {
-  ...fromEa(timing(6, 1, 0), ArgType.DirectAddr, EaSize.Long),
-  ...fromEa(timing(6, 1, 0), ArgType.DirectData, EaSize.Long),
+  ...sourceEa(timing(6, 1, 0), OperandType.DirectAddr, EaSize.Long),
+  ...sourceEa(timing(6, 1, 0), OperandType.DirectData, EaSize.Long),
   "#xxx,Dn": timing(14, 3, 0),
-  ...toMem(timing(12, 3, 0), ArgType.Immediate, EaSize.Long),
+  ...destMem(timing(12, 3, 0), OperandType.Immediate, EaSize.Long),
 };
 
-const divs = fromEa(timing(158, 1, 0), ArgType.DirectData);
-const divu = fromEa(timing(140, 1, 0), ArgType.DirectData);
-const muls = fromEa(timing(70, 1, 0), ArgType.DirectData);
-const mulu = fromEa(timing(70, 1, 0), ArgType.DirectData);
+const divs = sourceEa(timing(158, 1, 0), OperandType.DirectData);
+const divu = sourceEa(timing(140, 1, 0), OperandType.DirectData);
+const muls = sourceEa(timing(70, 1, 0), OperandType.DirectData);
+const mulu = sourceEa(timing(70, 1, 0), OperandType.DirectData);
 
 const addqSubqBW: TimingMap = {
   "#xxx,Dn": timing(4, 1, 0),
   "#xxx,An": timing(8, 1, 0),
-  ...toMem(timing(8, 1, 1), ArgType.Immediate),
+  ...destMem(timing(8, 1, 1), OperandType.Immediate),
 };
 const addqSubqL: TimingMap = {
   "#xxx,Dn": timing(8, 1, 0),
   "#xxx,An": timing(8, 1, 0),
-  ...toMem(timing(12, 1, 2), ArgType.Immediate, EaSize.Long),
+  ...destMem(timing(12, 1, 2), OperandType.Immediate, EaSize.Long),
 };
 
 const moveq: TimingMap = {
@@ -556,57 +572,57 @@ const moveq: TimingMap = {
 
 const clrBW: TimingMap = {
   Dn: timing(4, 1, 0),
-  ...singleMem(timing(8, 1, 1)),
+  ...unaryMem(timing(8, 1, 1)),
 };
 const clrL: TimingMap = {
   Dn: timing(6, 1, 0),
-  ...singleMem(timing(12, 1, 2), EaSize.Long),
+  ...unaryMem(timing(12, 1, 2), EaSize.Long),
 };
 
 const nbcd: TimingMap = {
   Dn: timing(6, 1, 0),
-  ...singleMem(timing(8, 1, 1)),
+  ...unaryMem(timing(8, 1, 1)),
 };
 
 const negxBW: TimingMap = {
   Dn: timing(4, 1, 0),
-  ...singleMem(timing(8, 1, 1)),
+  ...unaryMem(timing(8, 1, 1)),
 };
 const negxL: TimingMap = {
   Dn: timing(6, 1, 0),
-  ...singleMem(timing(12, 1, 2), EaSize.Long),
+  ...unaryMem(timing(12, 1, 2), EaSize.Long),
 };
 
 const scc: TimingMap = {
-  [ArgType.DirectData]: [timing(4, 1, 0), timing(6, 1, 0)], // false/true
-  ...singleMem(timing(8, 1, 1)),
+  [OperandType.DirectData]: [timing(4, 1, 0), timing(6, 1, 0)], // false/true
+  ...unaryMem(timing(8, 1, 1)),
 };
 
 const tstBW: TimingMap = {
   Dn: timing(4, 1, 0),
-  ...singleMem(timing(4, 1, 0)),
+  ...unaryMem(timing(4, 1, 0)),
 };
 const tstL: TimingMap = {
   Dn: timing(4, 1, 0),
-  ...singleMem(timing(4, 1, 0), EaSize.Long),
+  ...unaryMem(timing(4, 1, 0), EaSize.Long),
 };
 
 const tas: TimingMap = {
   Dn: timing(4, 1, 0),
-  ...singleMem(timing(10, 1, 1)),
+  ...unaryMem(timing(10, 1, 1)),
 };
 
 const shiftBW: TimingMap = {
   "#xxx,Dn": timing(6, 1, 0, { nClock: 2 }),
-  ...toMem(timing(8, 1, 1), ArgType.Immediate),
+  ...destMem(timing(8, 1, 1), OperandType.Immediate),
 };
 const shiftL: TimingMap = {
   "#xxx,Dn": timing(8, 1, 0, { nClock: 2 }),
 };
 
 const bchgBsetB: TimingMap = {
-  ...toMem(timing(8, 1, 1), ArgType.DirectData),
-  ...toMem(timing(12, 2, 1), ArgType.Immediate),
+  ...destMem(timing(8, 1, 1), OperandType.DirectData),
+  ...destMem(timing(12, 2, 1), OperandType.Immediate),
 };
 const bchgBsetL: TimingMap = {
   "Dn,Dn": timing(8, 1, 0),
@@ -614,8 +630,8 @@ const bchgBsetL: TimingMap = {
 };
 
 const bclrB: TimingMap = {
-  ...toMem(timing(8, 1, 1), ArgType.DirectData),
-  ...toMem(timing(12, 2, 1), ArgType.Immediate),
+  ...destMem(timing(8, 1, 1), OperandType.DirectData),
+  ...destMem(timing(12, 2, 1), OperandType.Immediate),
 };
 const bclrL: TimingMap = {
   "Dn,Dn": timing(10, 1, 0),
@@ -623,8 +639,8 @@ const bclrL: TimingMap = {
 };
 
 const btstB: TimingMap = {
-  ...toMem(timing(4, 1, 0), ArgType.DirectData),
-  ...toMem(timing(8, 2, 0), ArgType.Immediate),
+  ...destMem(timing(4, 1, 0), OperandType.DirectData),
+  ...destMem(timing(8, 2, 0), OperandType.Immediate),
 };
 const btstL: TimingMap = {
   "Dn,Dn": timing(6, 1, 0),
@@ -649,26 +665,25 @@ const dbcc: TimingMap = {
 };
 
 const jmp: TimingMap = {
-  [ArgType.Indirect]: timing(8, 2, 0),
-  [ArgType.IndirectDisp]: timing(10, 2, 0),
-  [ArgType.IndirectIx]: timing(14, 3, 0),
-  [ArgType.AbsoluteW]: timing(10, 2, 0),
-  [ArgType.AbsoluteL]: timing(12, 3, 0),
-  [ArgType.IndirectPcDisp]: timing(10, 2, 0),
-  [ArgType.IndirectPcIx]: timing(14, 3, 0),
+  [OperandType.Indirect]: timing(8, 2, 0),
+  [OperandType.IndirectDisp]: timing(10, 2, 0),
+  [OperandType.IndirectIx]: timing(14, 3, 0),
+  [OperandType.AbsoluteW]: timing(10, 2, 0),
+  [OperandType.AbsoluteL]: timing(12, 3, 0),
+  [OperandType.IndirectPcDisp]: timing(10, 2, 0),
+  [OperandType.IndirectPcIx]: timing(14, 3, 0),
 };
 
 const jsr: TimingMap = {
-  [ArgType.Indirect]: timing(16, 2, 0),
-  [ArgType.IndirectDisp]: timing(18, 2, 0),
-  [ArgType.IndirectIx]: timing(22, 2, 2),
-  [ArgType.AbsoluteW]: timing(18, 2, 2),
-  [ArgType.AbsoluteL]: timing(20, 3, 2),
-  [ArgType.IndirectPcDisp]: timing(18, 2, 2),
-  [ArgType.IndirectPcIx]: timing(22, 2, 2),
+  [OperandType.Indirect]: timing(16, 2, 0),
+  [OperandType.IndirectDisp]: timing(18, 2, 0),
+  [OperandType.IndirectIx]: timing(22, 2, 2),
+  [OperandType.AbsoluteW]: timing(18, 2, 2),
+  [OperandType.AbsoluteL]: timing(20, 3, 2),
+  [OperandType.IndirectPcDisp]: timing(18, 2, 2),
+  [OperandType.IndirectPcIx]: timing(22, 2, 2),
 };
 
-// TODO: these all need second arg
 const lea: TimingMap = {
   "(An),An": timing(4, 1, 0),
   "d(An),An": timing(8, 2, 0),
@@ -680,13 +695,13 @@ const lea: TimingMap = {
 };
 
 const pea: TimingMap = {
-  [ArgType.Indirect]: timing(12, 1, 2),
-  [ArgType.IndirectDisp]: timing(16, 2, 2),
-  [ArgType.IndirectIx]: timing(20, 2, 2),
-  [ArgType.AbsoluteW]: timing(16, 2, 2),
-  [ArgType.AbsoluteL]: timing(20, 3, 2),
-  [ArgType.IndirectPcDisp]: timing(16, 2, 2),
-  [ArgType.IndirectPcIx]: timing(20, 2, 2),
+  [OperandType.Indirect]: timing(12, 1, 2),
+  [OperandType.IndirectDisp]: timing(16, 2, 2),
+  [OperandType.IndirectIx]: timing(20, 2, 2),
+  [OperandType.AbsoluteW]: timing(16, 2, 2),
+  [OperandType.AbsoluteL]: timing(20, 3, 2),
+  [OperandType.IndirectPcDisp]: timing(16, 2, 2),
+  [OperandType.IndirectPcIx]: timing(20, 2, 2),
 };
 
 const addxSubxBw: TimingMap = {
@@ -844,14 +859,14 @@ const instructionTimings: InstructionTimings = {
   NOT: { B: clrBW, W: clrBW, L: clrL },
   OR: { B: andOrBW, W: andOrBW, L: orL },
   PEA: { NA: pea },
-  RESET: { NA: { [NO_ARGS]: timing(40, 6, 0) } },
+  RESET: { NA: { [NONE]: timing(40, 6, 0) } },
   ROL: { B: shiftBW, W: shiftBW, L: shiftL },
   ROR: { B: shiftBW, W: shiftBW, L: shiftL },
   ROXL: { B: shiftBW, W: shiftBW, L: shiftL },
   ROXR: { B: shiftBW, W: shiftBW, L: shiftL },
-  RTE: { NA: { [NO_ARGS]: timing(20, 5, 0) } },
-  RTR: { NA: { [NO_ARGS]: timing(20, 5, 0) } },
-  RTS: { NA: { [NO_ARGS]: timing(16, 4, 0) } },
+  RTE: { NA: { [NONE]: timing(20, 5, 0) } },
+  RTR: { NA: { [NONE]: timing(20, 5, 0) } },
+  RTS: { NA: { [NONE]: timing(16, 4, 0) } },
   SBCD: { B: xbcd },
   SCC: { B: scc },
   SCS: { B: scc },
@@ -872,8 +887,8 @@ const instructionTimings: InstructionTimings = {
   SVS: { B: scc },
   SWAP: { NA: { Dn: timing(4, 1, 0) } },
   TAS: { B: tas },
-  TRAP: { NA: { [NO_ARGS]: timing(38, 4, 0) } },
-  TRAPV: { NA: { [NO_ARGS]: timing(34, 4, 0) } },
+  TRAP: { NA: { [NONE]: timing(38, 4, 0) } },
+  TRAPV: { NA: { [NONE]: timing(34, 4, 0) } },
   TST: { B: tstBW, W: tstBW, L: tstL },
   UNLK: { NA: { Dn: timing(12, 3, 0) } },
 };

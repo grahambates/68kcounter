@@ -1,12 +1,12 @@
 import fs from "fs";
-import { ArgType } from "../src/args";
+import { OperandType } from "../src/operands";
 import { SIZE_L, SIZE_NA, SIZE_W } from "../src/instructions";
 import parse, {
   calcN,
   evalImmediate,
   parseLine,
   rangeN,
-  splitParams,
+  splitOperands,
 } from "../src";
 
 describe("parse()", () => {
@@ -20,13 +20,13 @@ describe("parse()", () => {
       { text: "label:", label: "label" },
       {
         text: "         MOVE.W  #1,d0 ; Comment",
-        op: {
+        statement: {
           instruction: "MOVE",
           size: SIZE_W,
           n: 1,
-          args: [
-            { value: "#1", type: ArgType.Immediate },
-            { value: "d0", type: ArgType.DirectData },
+          operands: [
+            { value: "#1", type: OperandType.Immediate },
+            { value: "d0", type: OperandType.DirectData },
           ],
         },
         timings: { clock: 8, read: 2, write: 0 },
@@ -34,12 +34,12 @@ describe("parse()", () => {
       { text: "         ; Comment" },
       {
         text: "         MOVE.W  d0,d1",
-        op: {
+        statement: {
           instruction: "MOVE",
           size: SIZE_W,
-          args: [
-            { value: "d0", type: ArgType.DirectData },
-            { value: "d1", type: ArgType.DirectData },
+          operands: [
+            { value: "d0", type: OperandType.DirectData },
+            { value: "d1", type: OperandType.DirectData },
           ],
         },
         timings: { clock: 4, read: 1, write: 0 },
@@ -54,17 +54,17 @@ describe("parse()", () => {
 });
 
 describe("parseLine()", () => {
-  test("two args", () => {
+  test("two operands", () => {
     const text = "     MOVE.W  #1,d0";
     expect(parseLine(text)).toEqual({
       text,
-      op: {
+      statement: {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        args: [
-          { value: "#1", type: ArgType.Immediate },
-          { value: "d0", type: ArgType.DirectData },
+        operands: [
+          { value: "#1", type: OperandType.Immediate },
+          { value: "d0", type: OperandType.DirectData },
         ],
       },
       timings: { clock: 8, read: 2, write: 0 },
@@ -75,13 +75,13 @@ describe("parseLine()", () => {
     const text = "\t\t\tMOVE.W\t\t#1,d0";
     expect(parseLine(text)).toEqual({
       text,
-      op: {
+      statement: {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        args: [
-          { value: "#1", type: ArgType.Immediate },
-          { value: "d0", type: ArgType.DirectData },
+        operands: [
+          { value: "#1", type: OperandType.Immediate },
+          { value: "d0", type: OperandType.DirectData },
         ],
       },
       timings: { clock: 8, read: 2, write: 0 },
@@ -92,13 +92,13 @@ describe("parseLine()", () => {
     const text = "     move.w #1,D0";
     expect(parseLine(text)).toEqual({
       text,
-      op: {
+      statement: {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        args: [
-          { value: "#1", type: ArgType.Immediate },
-          { value: "D0", type: ArgType.DirectData },
+        operands: [
+          { value: "#1", type: OperandType.Immediate },
+          { value: "D0", type: OperandType.DirectData },
         ],
       },
       timings: { clock: 8, read: 2, write: 0 },
@@ -109,13 +109,13 @@ describe("parseLine()", () => {
     const text = "     MOVE.W #1,d0    ; ignore this";
     expect(parseLine(text)).toEqual({
       text,
-      op: {
+      statement: {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        args: [
-          { value: "#1", type: ArgType.Immediate },
-          { value: "d0", type: ArgType.DirectData },
+        operands: [
+          { value: "#1", type: OperandType.Immediate },
+          { value: "d0", type: OperandType.DirectData },
         ],
       },
       timings: { clock: 8, read: 2, write: 0 },
@@ -127,13 +127,13 @@ describe("parseLine()", () => {
     expect(parseLine(text)).toEqual({
       text,
       label: "l0",
-      op: {
+      statement: {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        args: [
-          { value: "#1", type: ArgType.Immediate },
-          { value: "d0", type: ArgType.DirectData },
+        operands: [
+          { value: "#1", type: OperandType.Immediate },
+          { value: "d0", type: OperandType.DirectData },
         ],
       },
       timings: { clock: 8, read: 2, write: 0 },
@@ -145,13 +145,13 @@ describe("parseLine()", () => {
     expect(parseLine(text)).toEqual({
       text,
       label: "l0",
-      op: {
+      statement: {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        args: [
-          { value: "#1", type: ArgType.Immediate },
-          { value: "d0", type: ArgType.DirectData },
+        operands: [
+          { value: "#1", type: OperandType.Immediate },
+          { value: "d0", type: OperandType.DirectData },
         ],
       },
       timings: { clock: 8, read: 2, write: 0 },
@@ -162,13 +162,13 @@ describe("parseLine()", () => {
     const text = "     MOVE #1,d0";
     expect(parseLine(text)).toEqual({
       text,
-      op: {
+      statement: {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        args: [
-          { value: "#1", type: ArgType.Immediate },
-          { value: "d0", type: ArgType.DirectData },
+        operands: [
+          { value: "#1", type: OperandType.Immediate },
+          { value: "d0", type: OperandType.DirectData },
         ],
       },
       timings: { clock: 8, read: 2, write: 0 },
@@ -179,12 +179,12 @@ describe("parseLine()", () => {
     const text = "     BLO someLabel";
     expect(parseLine(text)).toEqual({
       text,
-      op: {
+      statement: {
         instruction: "BCS",
         size: SIZE_W,
-        args: [
+        operands: [
           {
-            type: ArgType.AbsoluteL,
+            type: OperandType.AbsoluteL,
             value: "someLabel",
           },
         ],
@@ -200,10 +200,10 @@ describe("parseLine()", () => {
     const text = "     CLR.W d0";
     expect(parseLine(text)).toEqual({
       text,
-      op: {
+      statement: {
         instruction: "CLR",
         size: SIZE_W,
-        args: [{ value: "d0", type: ArgType.DirectData }],
+        operands: [{ value: "d0", type: OperandType.DirectData }],
       },
       timings: { clock: 4, read: 1, write: 0 },
     });
@@ -213,13 +213,13 @@ describe("parseLine()", () => {
     const text = "     MOVEQ #1,d0";
     expect(parseLine(text)).toEqual({
       text,
-      op: {
+      statement: {
         instruction: "MOVEQ",
         size: SIZE_L,
         n: 1,
-        args: [
-          { value: "#1", type: ArgType.Immediate },
-          { value: "d0", type: ArgType.DirectData },
+        operands: [
+          { value: "#1", type: OperandType.Immediate },
+          { value: "d0", type: OperandType.DirectData },
         ],
       },
       timings: { clock: 4, read: 1, write: 0 },
@@ -230,10 +230,10 @@ describe("parseLine()", () => {
     const text = "     RTS";
     expect(parseLine(text)).toEqual({
       text,
-      op: {
+      statement: {
         instruction: "RTS",
         size: SIZE_NA,
-        args: [],
+        operands: [],
       },
       timings: { clock: 16, read: 4, write: 0 },
     });
@@ -278,15 +278,15 @@ describe("parseLine()", () => {
 
 describe("splitParams()", () => {
   test("split simple", () => {
-    expect(splitParams("foo,bar")).toEqual(["foo", "bar"]);
+    expect(splitOperands("foo,bar")).toEqual(["foo", "bar"]);
   });
 
   test("first with parens", () => {
-    expect(splitParams("1(a0,d0),bar")).toEqual(["1(a0,d0)", "bar"]);
+    expect(splitOperands("1(a0,d0),bar")).toEqual(["1(a0,d0)", "bar"]);
   });
 
   test("second with parens", () => {
-    expect(splitParams("foo,1(a0,d0)")).toEqual(["foo", "1(a0,d0)"]);
+    expect(splitOperands("foo,1(a0,d0)")).toEqual(["foo", "1(a0,d0)"]);
   });
 });
 
@@ -346,8 +346,8 @@ describe("calcN", () => {
   test("from range", () => {
     expect(
       calcN([
-        { type: ArgType.RegList, value: "d0-d4/d6/a0-a2/a4" },
-        { type: ArgType.IndirectPre, value: "-(sp)" },
+        { type: OperandType.RegList, value: "d0-d4/d6/a0-a2/a4" },
+        { type: OperandType.IndirectPre, value: "-(sp)" },
       ])
     ).toEqual(10);
   });
@@ -355,8 +355,8 @@ describe("calcN", () => {
   test("to range", () => {
     expect(
       calcN([
-        { type: ArgType.IndirectPost, value: "(sp)+" },
-        { type: ArgType.RegList, value: "d0-d4/d6/a0-a2/a4" },
+        { type: OperandType.IndirectPost, value: "(sp)+" },
+        { type: OperandType.RegList, value: "d0-d4/d6/a0-a2/a4" },
       ])
     ).toEqual(10);
   });
@@ -364,8 +364,8 @@ describe("calcN", () => {
   test("from immediate", () => {
     expect(
       calcN([
-        { type: ArgType.Immediate, value: "#3" },
-        { type: ArgType.DirectData, value: "d0" },
+        { type: OperandType.Immediate, value: "#3" },
+        { type: OperandType.DirectData, value: "d0" },
       ])
     ).toEqual(3);
   });
@@ -373,8 +373,8 @@ describe("calcN", () => {
   test("from immediate hex", () => {
     expect(
       calcN([
-        { type: ArgType.Immediate, value: "#$ff" },
-        { type: ArgType.DirectData, value: "d0" },
+        { type: OperandType.Immediate, value: "#$ff" },
+        { type: OperandType.DirectData, value: "d0" },
       ])
     ).toEqual(255);
   });
@@ -382,8 +382,8 @@ describe("calcN", () => {
   test("from immediate binary", () => {
     expect(
       calcN([
-        { type: ArgType.Immediate, value: "#%110" },
-        { type: ArgType.DirectData, value: "d0" },
+        { type: OperandType.Immediate, value: "#%110" },
+        { type: OperandType.DirectData, value: "d0" },
       ])
     ).toEqual(6);
   });
@@ -391,8 +391,8 @@ describe("calcN", () => {
   test("to immediate", () => {
     expect(
       calcN([
-        { type: ArgType.DirectData, value: "d0" },
-        { type: ArgType.Immediate, value: "#3" },
+        { type: OperandType.DirectData, value: "d0" },
+        { type: OperandType.Immediate, value: "#3" },
       ])
     ).toEqual(3);
   });

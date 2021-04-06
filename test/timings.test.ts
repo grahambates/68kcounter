@@ -1,39 +1,39 @@
 import { applyN, lookupTiming } from "../src/timings";
-import { ArgType } from "../src/args";
-import { Op } from "../src";
+import { OperandType } from "../src/operands";
+import { Statement } from "../src";
 
 describe("lookupTiming", () => {
   test("move.w d0,d1", () => {
-    const op: Op = {
+    const stmt: Statement = {
       instruction: "MOVE",
       size: "W",
-      args: [
-        { value: "d0", type: ArgType.DirectData },
-        { value: "d1", type: ArgType.DirectData },
+      operands: [
+        { value: "d0", type: OperandType.DirectData },
+        { value: "d1", type: OperandType.DirectData },
       ],
     };
-    expect(lookupTiming(op)).toEqual({ clock: 4, read: 1, write: 0 });
+    expect(lookupTiming(stmt)).toEqual({ clock: 4, read: 1, write: 0 });
   });
 
   test("add.w (a0),d1", () => {
-    const op: Op = {
+    const stmt: Statement = {
       instruction: "ADD",
       size: "W",
-      args: [
-        { value: "(a0)", type: ArgType.Indirect },
-        { value: "d1", type: ArgType.DirectData },
+      operands: [
+        { value: "(a0)", type: OperandType.Indirect },
+        { value: "d1", type: OperandType.DirectData },
       ],
     };
-    expect(lookupTiming(op)).toEqual({ clock: 8, read: 2, write: 0 });
+    expect(lookupTiming(stmt)).toEqual({ clock: 8, read: 2, write: 0 });
   });
 
   test("bsr.w foo", () => {
-    const op: Op = {
+    const stmt: Statement = {
       instruction: "BSR",
       size: "W",
-      args: [{ value: "foo", type: ArgType.AbsoluteL }],
+      operands: [{ value: "foo", type: OperandType.AbsoluteL }],
     };
-    expect(lookupTiming(op)).toEqual({ clock: 18, read: 2, write: 2 });
+    expect(lookupTiming(stmt)).toEqual({ clock: 18, read: 2, write: 2 });
   });
 });
 
