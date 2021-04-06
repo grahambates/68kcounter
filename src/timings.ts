@@ -15,11 +15,15 @@ export interface Timing {
  * Look up timing information for a parsed operation
  */
 export function lookupTiming(op: Statement): Timing | Timing[] | null {
-  const { instruction, size, operands } = op;
+  const { instruction, size, source, dest } = op;
   const instructionTiming = instructionTimings[instruction];
 
   // Convert operands list to string for use as key
-  const key = operands.map((o) => o.type).join(",") || NONE;
+  const key =
+    [source, dest]
+      .map((o) => o && o.type)
+      .filter(Boolean)
+      .join(",") || NONE;
 
   // Try specified / default size:
   const sizeTiming = instructionTiming[size];

@@ -20,7 +20,8 @@ export interface Line {
 export interface Statement {
   instruction: Instruction;
   size: InstructionSize;
-  operands: Operand[];
+  source?: Operand;
+  dest?: Operand;
   n?: number;
 }
 
@@ -71,23 +72,30 @@ export function parseLine(
     return { text };
   }
 
+  const statement: Statement = {
+    instruction,
+    size,
+  };
+
   // Operands:
-  const operands: Operand[] = [];
   if (parts[2]) {
+    const operands: Operand[] = [];
     splitOperands(parts[2]).forEach((value) => {
       const type = lookupOperandType(value);
       type && operands.push({ type, value });
     });
+
+    if (operands.length >= 2) {
+      statement.dest = operands[1];
+      statement.source = operands[0];
+    } else if (operands.length == 1) {
+      statement.dest = operands[0];
+    }
+
+    statement.n = calcN(operands, vars);
   }
 
-  const op: Statement = {
-    instruction,
-    size,
-    operands,
-    n: calcN(operands, vars),
-  };
-
-  return { text, label, statement: op, timings: lookupTiming(op) };
+  return { text, label, statement, timings: lookupTiming(statement) };
 }
 
 /**

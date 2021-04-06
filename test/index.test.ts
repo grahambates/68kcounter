@@ -24,10 +24,8 @@ describe("parse()", () => {
           instruction: "MOVE",
           size: SIZE_W,
           n: 1,
-          operands: [
-            { value: "#1", type: OperandType.Immediate },
-            { value: "d0", type: OperandType.DirectData },
-          ],
+          source: { value: "#1", type: OperandType.Immediate },
+          dest: { value: "d0", type: OperandType.DirectData },
         },
         timings: { clock: 8, read: 2, write: 0 },
       },
@@ -37,10 +35,8 @@ describe("parse()", () => {
         statement: {
           instruction: "MOVE",
           size: SIZE_W,
-          operands: [
-            { value: "d0", type: OperandType.DirectData },
-            { value: "d1", type: OperandType.DirectData },
-          ],
+          source: { value: "d0", type: OperandType.DirectData },
+          dest: { value: "d1", type: OperandType.DirectData },
         },
         timings: { clock: 4, read: 1, write: 0 },
       },
@@ -62,10 +58,8 @@ describe("parseLine()", () => {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        operands: [
-          { value: "#1", type: OperandType.Immediate },
-          { value: "d0", type: OperandType.DirectData },
-        ],
+        source: { value: "#1", type: OperandType.Immediate },
+        dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
     });
@@ -79,10 +73,8 @@ describe("parseLine()", () => {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        operands: [
-          { value: "#1", type: OperandType.Immediate },
-          { value: "d0", type: OperandType.DirectData },
-        ],
+        source: { value: "#1", type: OperandType.Immediate },
+        dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
     });
@@ -96,10 +88,8 @@ describe("parseLine()", () => {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        operands: [
-          { value: "#1", type: OperandType.Immediate },
-          { value: "D0", type: OperandType.DirectData },
-        ],
+        source: { value: "#1", type: OperandType.Immediate },
+        dest: { value: "D0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
     });
@@ -113,10 +103,8 @@ describe("parseLine()", () => {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        operands: [
-          { value: "#1", type: OperandType.Immediate },
-          { value: "d0", type: OperandType.DirectData },
-        ],
+        source: { value: "#1", type: OperandType.Immediate },
+        dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
     });
@@ -131,10 +119,8 @@ describe("parseLine()", () => {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        operands: [
-          { value: "#1", type: OperandType.Immediate },
-          { value: "d0", type: OperandType.DirectData },
-        ],
+        source: { value: "#1", type: OperandType.Immediate },
+        dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
     });
@@ -149,10 +135,8 @@ describe("parseLine()", () => {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        operands: [
-          { value: "#1", type: OperandType.Immediate },
-          { value: "d0", type: OperandType.DirectData },
-        ],
+        source: { value: "#1", type: OperandType.Immediate },
+        dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
     });
@@ -166,10 +150,8 @@ describe("parseLine()", () => {
         instruction: "MOVE",
         size: SIZE_W,
         n: 1,
-        operands: [
-          { value: "#1", type: OperandType.Immediate },
-          { value: "d0", type: OperandType.DirectData },
-        ],
+        source: { value: "#1", type: OperandType.Immediate },
+        dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
     });
@@ -182,12 +164,10 @@ describe("parseLine()", () => {
       statement: {
         instruction: "BCS",
         size: SIZE_W,
-        operands: [
-          {
-            type: OperandType.AbsoluteL,
-            value: "someLabel",
-          },
-        ],
+        dest: {
+          type: OperandType.AbsoluteL,
+          value: "someLabel",
+        },
       },
       timings: [
         { clock: 10, read: 2, write: 0 },
@@ -203,7 +183,7 @@ describe("parseLine()", () => {
       statement: {
         instruction: "CLR",
         size: SIZE_W,
-        operands: [{ value: "d0", type: OperandType.DirectData }],
+        dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 4, read: 1, write: 0 },
     });
@@ -217,10 +197,8 @@ describe("parseLine()", () => {
         instruction: "MOVEQ",
         size: SIZE_L,
         n: 1,
-        operands: [
-          { value: "#1", type: OperandType.Immediate },
-          { value: "d0", type: OperandType.DirectData },
-        ],
+        source: { value: "#1", type: OperandType.Immediate },
+        dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 4, read: 1, write: 0 },
     });
@@ -233,7 +211,6 @@ describe("parseLine()", () => {
       statement: {
         instruction: "RTS",
         size: SIZE_NA,
-        operands: [],
       },
       timings: { clock: 16, read: 4, write: 0 },
     });

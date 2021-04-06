@@ -7,10 +7,8 @@ describe("lookupTiming", () => {
     const stmt: Statement = {
       instruction: "MOVE",
       size: "W",
-      operands: [
-        { value: "d0", type: OperandType.DirectData },
-        { value: "d1", type: OperandType.DirectData },
-      ],
+      source: { value: "d0", type: OperandType.DirectData },
+      dest: { value: "d1", type: OperandType.DirectData },
     };
     expect(lookupTiming(stmt)).toEqual({ clock: 4, read: 1, write: 0 });
   });
@@ -19,10 +17,8 @@ describe("lookupTiming", () => {
     const stmt: Statement = {
       instruction: "ADD",
       size: "W",
-      operands: [
-        { value: "(a0)", type: OperandType.Indirect },
-        { value: "d1", type: OperandType.DirectData },
-      ],
+      source: { value: "(a0)", type: OperandType.Indirect },
+      dest: { value: "d1", type: OperandType.DirectData },
     };
     expect(lookupTiming(stmt)).toEqual({ clock: 8, read: 2, write: 0 });
   });
@@ -31,7 +27,7 @@ describe("lookupTiming", () => {
     const stmt: Statement = {
       instruction: "BSR",
       size: "W",
-      operands: [{ value: "foo", type: OperandType.AbsoluteL }],
+      dest: { value: "foo", type: OperandType.AbsoluteL },
     };
     expect(lookupTiming(stmt)).toEqual({ clock: 18, read: 2, write: 2 });
   });
