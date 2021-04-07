@@ -9,7 +9,7 @@ export function getWords(statement: Statement): number {
   const { instruction, size, source } = statement;
 
   if (source && source.type === OperandType.Immediate) {
-    const immInstrs = ["ANDI", "ADDI", "SUBI", "ORI", "CMPI", "EORI"];
+    const immInstrs = ["AND", "ADD", "SUB", "OR", "CMP", "EOR"];
     if (immInstrs.includes(instruction)) {
       return size === Size.L ? 3 : 2;
     }
