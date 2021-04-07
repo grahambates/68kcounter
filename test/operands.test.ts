@@ -11,23 +11,23 @@ import {
 describe("parseOperandsText", () => {
   test("source and dest", () => {
     const expected: Operands = {
-      source: { type: OperandType.DirectData, text: "d0" },
-      dest: { type: OperandType.DirectData, text: "d1" },
+      source: { type: OperandType.Dn, text: "d0" },
+      dest: { type: OperandType.Dn, text: "d1" },
     };
     expect(parseOperandsText("d0,d1")).toEqual(expected);
   });
 
   test("dest only", () => {
     const expected: Operands = {
-      dest: { type: OperandType.DirectData, text: "d1" },
+      dest: { type: OperandType.Dn, text: "d1" },
     };
     expect(parseOperandsText("d1")).toEqual(expected);
   });
 
   test("with immediate value", () => {
     const expected: Operands = {
-      source: { type: OperandType.Immediate, text: "#1", value: 1 },
-      dest: { type: OperandType.DirectData, text: "d1" },
+      source: { type: OperandType.Imm, text: "#1", value: 1 },
+      dest: { type: OperandType.Dn, text: "d1" },
     };
     expect(parseOperandsText("#1,d1")).toEqual(expected);
   });
@@ -35,7 +35,7 @@ describe("parseOperandsText", () => {
   test("with range value", () => {
     const expected: Operands = {
       source: { type: OperandType.RegList, text: "d0-d6", value: 7 },
-      dest: { type: OperandType.IndirectPre, text: "-(sr)" },
+      dest: { type: OperandType.AnPreDec, text: "-(sr)" },
     };
     expect(parseOperandsText("d0-d6,-(sr)")).toEqual(expected);
   });
@@ -43,66 +43,66 @@ describe("parseOperandsText", () => {
 
 describe("lookupArgType", () => {
   test("direct data", () => {
-    expect(lookupOperandType("d0")).toEqual(OperandType.DirectData);
-    expect(lookupOperandType("d7")).toEqual(OperandType.DirectData);
+    expect(lookupOperandType("d0")).toEqual(OperandType.Dn);
+    expect(lookupOperandType("d7")).toEqual(OperandType.Dn);
   });
 
   test("direct address", () => {
-    expect(lookupOperandType("a0")).toEqual(OperandType.DirectAddr);
-    expect(lookupOperandType("a7")).toEqual(OperandType.DirectAddr);
-    expect(lookupOperandType("sr")).toEqual(OperandType.DirectAddr);
+    expect(lookupOperandType("a0")).toEqual(OperandType.An);
+    expect(lookupOperandType("a7")).toEqual(OperandType.An);
+    expect(lookupOperandType("sr")).toEqual(OperandType.An);
   });
 
   test("indirect", () => {
-    expect(lookupOperandType("(a0)")).toEqual(OperandType.Indirect);
-    expect(lookupOperandType("(a7)")).toEqual(OperandType.Indirect);
-    expect(lookupOperandType("(sr)")).toEqual(OperandType.Indirect);
+    expect(lookupOperandType("(a0)")).toEqual(OperandType.AnIndir);
+    expect(lookupOperandType("(a7)")).toEqual(OperandType.AnIndir);
+    expect(lookupOperandType("(sr)")).toEqual(OperandType.AnIndir);
   });
 
   test("indirect post increment", () => {
-    expect(lookupOperandType("(a0)+")).toEqual(OperandType.IndirectPost);
-    expect(lookupOperandType("(a7)+")).toEqual(OperandType.IndirectPost);
-    expect(lookupOperandType("(sr)+")).toEqual(OperandType.IndirectPost);
+    expect(lookupOperandType("(a0)+")).toEqual(OperandType.AnPostInc);
+    expect(lookupOperandType("(a7)+")).toEqual(OperandType.AnPostInc);
+    expect(lookupOperandType("(sr)+")).toEqual(OperandType.AnPostInc);
   });
 
   test("indirect pre decrement", () => {
-    expect(lookupOperandType("-(a0)")).toEqual(OperandType.IndirectPre);
-    expect(lookupOperandType("-(a7)")).toEqual(OperandType.IndirectPre);
-    expect(lookupOperandType("-(sr)")).toEqual(OperandType.IndirectPre);
+    expect(lookupOperandType("-(a0)")).toEqual(OperandType.AnPreDec);
+    expect(lookupOperandType("-(a7)")).toEqual(OperandType.AnPreDec);
+    expect(lookupOperandType("-(sr)")).toEqual(OperandType.AnPreDec);
   });
 
   test("indirect displacement", () => {
-    expect(lookupOperandType("1(a0)")).toEqual(OperandType.IndirectDisp);
-    expect(lookupOperandType("example(a0)")).toEqual(OperandType.IndirectDisp);
+    expect(lookupOperandType("1(a0)")).toEqual(OperandType.AnDisp);
+    expect(lookupOperandType("example(a0)")).toEqual(OperandType.AnDisp);
   });
 
   test("indirect displacement - old", () => {
-    expect(lookupOperandType("(1,a0)")).toEqual(OperandType.IndirectDisp);
+    expect(lookupOperandType("(1,a0)")).toEqual(OperandType.AnDisp);
   });
 
   test("indirect displacement with index", () => {
-    expect(lookupOperandType("1(a0,d0)")).toEqual(OperandType.IndirectIx);
-    expect(lookupOperandType("(1,a0,d0)")).toEqual(OperandType.IndirectIx);
+    expect(lookupOperandType("1(a0,d0)")).toEqual(OperandType.AnDispIx);
+    expect(lookupOperandType("(1,a0,d0)")).toEqual(OperandType.AnDispIx);
   });
 
   test("indirect displacement", () => {
-    expect(lookupOperandType("1(pc)")).toEqual(OperandType.IndirectPcDisp);
-    expect(lookupOperandType("(1,pc)")).toEqual(OperandType.IndirectPcDisp);
+    expect(lookupOperandType("1(pc)")).toEqual(OperandType.PcDisp);
+    expect(lookupOperandType("(1,pc)")).toEqual(OperandType.PcDisp);
   });
 
   test("indirect displacement with index PC", () => {
-    expect(lookupOperandType("1(pc,d0)")).toEqual(OperandType.IndirectPcIx);
-    expect(lookupOperandType("(1,pc,d0)")).toEqual(OperandType.IndirectPcIx);
+    expect(lookupOperandType("1(pc,d0)")).toEqual(OperandType.PcDispIx);
+    expect(lookupOperandType("(1,pc,d0)")).toEqual(OperandType.PcDispIx);
   });
 
   test("immediate", () => {
-    expect(lookupOperandType("#123")).toEqual(OperandType.Immediate);
-    expect(lookupOperandType("#$12a")).toEqual(OperandType.Immediate);
-    expect(lookupOperandType("#%01010")).toEqual(OperandType.Immediate);
+    expect(lookupOperandType("#123")).toEqual(OperandType.Imm);
+    expect(lookupOperandType("#$12a")).toEqual(OperandType.Imm);
+    expect(lookupOperandType("#%01010")).toEqual(OperandType.Imm);
   });
 
   test("immediate symbol", () => {
-    expect(lookupOperandType("#foo")).toEqual(OperandType.Immediate);
+    expect(lookupOperandType("#foo")).toEqual(OperandType.Imm);
   });
 
   test("register list (movem)", () => {
@@ -114,22 +114,22 @@ describe("lookupArgType", () => {
   });
 
   test("absolute word", () => {
-    expect(lookupOperandType("foo.w")).toEqual(OperandType.AbsoluteW);
-    expect(lookupOperandType("$12a.w")).toEqual(OperandType.AbsoluteW);
+    expect(lookupOperandType("foo.w")).toEqual(OperandType.AbsW);
+    expect(lookupOperandType("$12a.w")).toEqual(OperandType.AbsW);
   });
 
   test("absolute long", () => {
-    expect(lookupOperandType("foo.l")).toEqual(OperandType.AbsoluteL);
-    expect(lookupOperandType("$12a.l")).toEqual(OperandType.AbsoluteL);
+    expect(lookupOperandType("foo.l")).toEqual(OperandType.AbsL);
+    expect(lookupOperandType("$12a.l")).toEqual(OperandType.AbsL);
   });
 
   test("absolute long default", () => {
-    expect(lookupOperandType("foo")).toEqual(OperandType.AbsoluteL);
-    expect(lookupOperandType("$12a")).toEqual(OperandType.AbsoluteL);
+    expect(lookupOperandType("foo")).toEqual(OperandType.AbsL);
+    expect(lookupOperandType("$12a")).toEqual(OperandType.AbsL);
   });
 
   test("case insensitive", () => {
-    expect(lookupOperandType("D0")).toEqual(OperandType.DirectData);
+    expect(lookupOperandType("D0")).toEqual(OperandType.Dn);
   });
 });
 

@@ -13,19 +13,19 @@ export interface Operand {
 export type Operands = { source?: Operand; dest?: Operand };
 
 export enum OperandType {
-  DirectData = "Dn",
-  DirectAddr = "An",
-  Indirect = "(An)",
-  IndirectPost = "(An)+",
-  IndirectPre = "-(An)",
-  IndirectDisp = "d(An)",
-  IndirectIx = "d(An,ix)",
-  IndirectPcDisp = "d(PC)",
-  IndirectPcIx = "d(PC,ix)",
-  AbsoluteW = "xxx.W",
-  AbsoluteL = "xxx.L",
+  Dn = "Dn",
+  An = "An",
+  AnIndir = "(An)",
+  AnPostInc = "(An)+",
+  AnPreDec = "-(An)",
+  AnDisp = "d(An)",
+  AnDispIx = "d(An,ix)",
+  PcDisp = "d(PC)",
+  PcDispIx = "d(PC,ix)",
+  AbsW = "xxx.W",
+  AbsL = "xxx.L",
   RegList = "RegList",
-  Immediate = "#xxx",
+  Imm = "#xxx",
 }
 
 /**
@@ -43,7 +43,7 @@ export function parseOperandsText(str: string, vars: Vars = {}): Operands {
       const operand: Operand = { type, text };
       if (type === OperandType.RegList) {
         operand.value = rangeN(text);
-      } else if (type === OperandType.Immediate) {
+      } else if (type === OperandType.Imm) {
         operand.value = evalImmediate(text, vars);
       }
       operands.push(operand);
@@ -120,23 +120,23 @@ export function lookupOperandType(operand: string): OperandType | null {
  * Regular expressions to identify operand type from text.
  */
 const types: { type: OperandType; exp: RegExp }[] = [
-  { type: OperandType.DirectData, exp: /^d[0-7]$/i },
-  { type: OperandType.DirectAddr, exp: /^(a[0-7]|sr)$/i },
-  { type: OperandType.Indirect, exp: /^\((a[0-7]|sr)\)$/i },
-  { type: OperandType.IndirectPost, exp: /^\((a[0-7]|sr)\)\+$/i },
-  { type: OperandType.IndirectPre, exp: /^-\((a[0-7]|sr)\)$/i },
+  { type: OperandType.Dn, exp: /^d[0-7]$/i },
+  { type: OperandType.An, exp: /^(a[0-7]|sr)$/i },
+  { type: OperandType.AnIndir, exp: /^\((a[0-7]|sr)\)$/i },
+  { type: OperandType.AnPostInc, exp: /^\((a[0-7]|sr)\)\+$/i },
+  { type: OperandType.AnPreDec, exp: /^-\((a[0-7]|sr)\)$/i },
   {
-    type: OperandType.IndirectDisp,
+    type: OperandType.AnDisp,
     exp: /([0-9a-f]\(a[0-7]\)|\([0-9a-f],a[0-7]\))$/i,
   },
-  { type: OperandType.IndirectIx, exp: /a[0-7],d[0-7]\)$/i },
+  { type: OperandType.AnDispIx, exp: /a[0-7],d[0-7]\)$/i },
   {
-    type: OperandType.IndirectPcDisp,
+    type: OperandType.PcDisp,
     exp: /([0-9a-f]\(pc\)|\([0-9a-f],pc\))$/i,
   },
-  { type: OperandType.IndirectPcIx, exp: /pc,d[0-7]\)$/i },
-  { type: OperandType.Immediate, exp: /^#./i },
+  { type: OperandType.PcDispIx, exp: /pc,d[0-7]\)$/i },
+  { type: OperandType.Imm, exp: /^#./i },
   { type: OperandType.RegList, exp: /(d|a)[0-7](\/|-)(d|a)[0-7]/i },
-  { type: OperandType.AbsoluteW, exp: /\.W$/i },
-  { type: OperandType.AbsoluteL, exp: /./i }, // Default
+  { type: OperandType.AbsW, exp: /\.W$/i },
+  { type: OperandType.AbsL, exp: /./i }, // Default
 ];

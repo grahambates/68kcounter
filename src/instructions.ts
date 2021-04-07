@@ -155,7 +155,7 @@ export function isInstruction(v: string): v is Instruction {
  * Check if string is a valid instruction size
  */
 export function isInstructionSize(v: string): v is Size {
-  return [Size.B, Size.W, Size.L, Size.NA].includes(v as Size);
+  return Object.values(Size).includes(v as Size);
 }
 
 // Build map of instructions and their supported sizes.

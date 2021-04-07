@@ -8,8 +8,8 @@ describe("lookupTiming", () => {
     const stmt: Statement = {
       instruction: "MOVE",
       size: Size.W,
-      source: { text: "d0", type: OperandType.DirectData },
-      dest: { text: "d1", type: OperandType.DirectData },
+      source: { text: "d0", type: OperandType.Dn },
+      dest: { text: "d1", type: OperandType.Dn },
     };
     expect(lookupTiming(stmt)).toEqual({ clock: 4, read: 1, write: 0 });
   });
@@ -18,8 +18,8 @@ describe("lookupTiming", () => {
     const stmt: Statement = {
       instruction: "ADD",
       size: Size.W,
-      source: { text: "(a0)", type: OperandType.Indirect },
-      dest: { text: "d1", type: OperandType.DirectData },
+      source: { text: "(a0)", type: OperandType.AnIndir },
+      dest: { text: "d1", type: OperandType.Dn },
     };
     expect(lookupTiming(stmt)).toEqual({ clock: 8, read: 2, write: 0 });
   });
@@ -28,9 +28,41 @@ describe("lookupTiming", () => {
     const stmt: Statement = {
       instruction: "BSR",
       size: Size.W,
-      dest: { text: "foo", type: OperandType.AbsoluteL },
+      dest: { text: "foo", type: OperandType.AbsL },
     };
     expect(lookupTiming(stmt)).toEqual({ clock: 18, read: 2, write: 2 });
+  });
+
+  test("movem.l d0-a6,-(sp)", () => {
+    const n = 15;
+    const stmt: Statement = {
+      instruction: "MOVEM",
+      size: Size.L,
+      source: { text: "d0-a6", type: OperandType.RegList, value: n },
+      dest: { text: "-(sp)", type: OperandType.AnPreDec },
+    };
+    // 8+8n(2/2n)
+    expect(lookupTiming(stmt)).toEqual({
+      clock: 8 + 8 * n,
+      read: 2,
+      write: 2 * n,
+    });
+  });
+
+  test("lsl.w #4,d0", () => {
+    const n = 4;
+    const stmt: Statement = {
+      instruction: "LSL",
+      size: Size.W,
+      source: { text: "#4", type: OperandType.Imm, value: n },
+      dest: { text: "d0", type: OperandType.Dn },
+    };
+    // 6+2n(1/0)
+    expect(lookupTiming(stmt)).toEqual({
+      clock: 6 + 2 * n,
+      read: 1,
+      write: 0,
+    });
   });
 });
 

@@ -8,7 +8,7 @@ import { OperandType } from "./operands";
 export function getWords(statement: Statement): number {
   const { instruction, size, source } = statement;
 
-  if (source && source.type === OperandType.Immediate) {
+  if (source && source.type === OperandType.Imm) {
     const immInstrs = ["AND", "ADD", "SUB", "OR", "CMP", "EOR"];
     if (immInstrs.includes(instruction)) {
       return size === Size.L ? 3 : 2;
