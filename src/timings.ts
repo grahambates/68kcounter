@@ -1,6 +1,6 @@
-import { Statement } from ".";
+import { Instruction } from ".";
 import { OperandType } from "./operands";
-import { Instruction, Size } from "./instructions";
+import { Mnemonic, Size } from "./mnemonics";
 
 /**
  * Describes timing information for a given instruction
@@ -14,9 +14,11 @@ export interface Timing {
 /**
  * Look up timing information for a parsed operation
  */
-export function lookupTiming(stmt: Statement): Timing | Timing[] | null {
-  const { instruction, size, source, dest } = stmt;
-  const instructionTiming = instructionTimings[instruction];
+export function lookupTiming(
+  instruction: Instruction
+): Timing | Timing[] | null {
+  const { mnemonic, size, source, dest } = instruction;
+  const mnemTimings = timings[mnemonic];
 
   // Convert operands list to string for use as key
   const key =
@@ -28,14 +30,14 @@ export function lookupTiming(stmt: Statement): Timing | Timing[] | null {
   const n: number = source?.value || dest?.value || 0;
 
   // Try specified / default size:
-  const sizeTiming = instructionTiming[size];
+  const sizeTiming = mnemTimings[size];
   if (sizeTiming && sizeTiming[key]) {
     return applyNMultiple(sizeTiming[key], n);
   }
 
   // Use first matching size if specified size/operands aren't found in table:
-  for (const s in instructionTiming) {
-    const sizeTiming = instructionTiming[s as Size];
+  for (const s in mnemTimings) {
+    const sizeTiming = mnemTimings[s as Size];
     if (sizeTiming && sizeTiming[key]) {
       return applyNMultiple(sizeTiming[key], n);
     }
@@ -258,7 +260,7 @@ const destMem = (base: Timing, source: OperandType, size: EaSize = WB) =>
     return acc;
   }, {} as TimingMap);
 
-// Build maps for each instruction / size:
+// Build maps for each mnemonic / size:
 
 const moveBW: TimingMap = {
   "Dn,Dn": timing(4, 1, 0),
@@ -779,12 +781,12 @@ const movemL: TimingMap = {
 };
 
 type SizeTimings = Partial<Record<Size, TimingMap>>;
-type InstructionTimings = Record<Instruction, SizeTimings>;
+type InstructionTimings = Record<Mnemonic, SizeTimings>;
 
 /**
- * Table of TimingMaps for each instruction / size
+ * Table of TimingMaps for each mnemonic / size
  */
-const instructionTimings: InstructionTimings = {
+const timings: InstructionTimings = {
   ABCD: { B: xbcd },
   ADD: { B: addSubBW, W: addSubBW, L: addSubL },
   ADDQ: { B: addqSubqBW, W: addqSubqBW, L: addqSubqL },

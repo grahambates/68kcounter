@@ -1,75 +1,70 @@
-import {
-  isInstruction,
-  isInstructionSize,
-  parseInstructionText,
-  Size,
-} from "../src/instructions";
+import { isMnemonic, isSize, parseMnemonicText, Size } from "../src/mnemonics";
 
 describe("parseInstructionText()", () => {
   test("exact with size", () => {
-    expect(parseInstructionText("MOVE.L")).toEqual({
-      instruction: "MOVE",
+    expect(parseMnemonicText("MOVE.L")).toEqual({
+      mnemonic: "MOVE",
       size: Size.L,
     });
   });
 
   test("lowercase", () => {
-    expect(parseInstructionText("move.l")).toEqual({
-      instruction: "MOVE",
+    expect(parseMnemonicText("move.l")).toEqual({
+      mnemonic: "MOVE",
       size: Size.L,
     });
   });
 
   test("default size W", () => {
-    expect(parseInstructionText("MOVE")).toEqual({
-      instruction: "MOVE",
+    expect(parseMnemonicText("MOVE")).toEqual({
+      mnemonic: "MOVE",
       size: Size.W,
     });
   });
 
   test("default size L", () => {
-    expect(parseInstructionText("MOVEQ")).toEqual({
-      instruction: "MOVEQ",
+    expect(parseMnemonicText("MOVEQ")).toEqual({
+      mnemonic: "MOVEQ",
       size: Size.L,
     });
   });
 
   test("default size B", () => {
-    expect(parseInstructionText("BTST")).toEqual({
-      instruction: "BTST",
+    expect(parseMnemonicText("BTST")).toEqual({
+      mnemonic: "BTST",
       size: Size.B,
     });
   });
 
   test("aliased", () => {
-    expect(parseInstructionText("ADDI.W")).toEqual({
-      instruction: "ADD",
+    expect(parseMnemonicText("ADDI.W")).toEqual({
+      mnemonic: "ADD",
       size: Size.W,
     });
   });
 
   test("invalid", () => {
-    expect(parseInstructionText("FOO")).toBeNull();
+    expect(parseMnemonicText("FOO")).toBeNull();
   });
 });
 
 describe("isInstruction()", () => {
   test("valid", () => {
-    expect(isInstruction("MOVE")).toBeTruthy();
+    expect(isMnemonic("MOVE")).toBeTruthy();
   });
   test("invalid", () => {
-    expect(isInstruction("FOO")).toBeFalsy();
+    expect(isMnemonic("FOO")).toBeFalsy();
   });
 });
 
-describe("isInstructionSize()", () => {
+describe("isSize()", () => {
   test("valid", () => {
-    expect(isInstructionSize("B")).toBeTruthy();
-    expect(isInstructionSize("W")).toBeTruthy();
-    expect(isInstructionSize("L")).toBeTruthy();
-    expect(isInstructionSize("NA")).toBeTruthy();
+    expect(isSize("B")).toBeTruthy();
+    expect(isSize("W")).toBeTruthy();
+    expect(isSize("L")).toBeTruthy();
+    expect(isSize("NA")).toBeTruthy();
   });
   test("invalid", () => {
-    expect(isInstruction("X")).toBeFalsy();
+    expect(isMnemonic("X")).toBeFalsy();
   });
 });

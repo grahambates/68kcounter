@@ -1,20 +1,20 @@
 import { lookupTiming, Timing } from "./timings";
 import { Operand, parseOperandsText } from "./operands";
-import { Instruction, parseInstructionText, Size } from "./instructions";
+import { Mnemonic, parseMnemonicText, Size } from "./mnemonics";
 import { getWords } from "./words";
 
 /** Parsed line of code */
 export interface Line {
   text: string;
   label?: string;
-  statement?: Statement;
+  instruction?: Instruction;
   timings?: Timing | Timing[] | null;
   words?: number;
 }
 
 /** Logical statement from code */
-export interface Statement {
-  instruction: Instruction;
+export interface Instruction {
+  mnemonic: Mnemonic;
   size: Size;
   source?: Operand;
   dest?: Operand;
@@ -35,18 +35,18 @@ export default function parse(input: string): Line[] {
  */
 export function parseLine(text: string, vars: Vars = {}): Line {
   // Remove comments and split line on whitespace
-  const [labelText, instText, opText] = text.split(";")[0].split(/\s+/);
+  const [labelText, mnemText, opText] = text.split(";")[0].split(/\s+/);
 
   const label = labelText.replace(/:$/, "") || undefined;
 
-  let statement = instText && parseInstructionText(instText);
-  if (!statement) {
+  let instruction = mnemText && parseMnemonicText(mnemText);
+  if (!instruction) {
     return { text, label };
   }
 
   if (opText) {
-    statement = {
-      ...statement,
+    instruction = {
+      ...instruction,
       ...parseOperandsText(opText, vars),
     };
   }
@@ -54,8 +54,8 @@ export function parseLine(text: string, vars: Vars = {}): Line {
   return {
     text,
     label,
-    statement,
-    timings: lookupTiming(statement),
-    words: getWords(statement),
+    instruction,
+    timings: lookupTiming(instruction),
+    words: getWords(instruction),
   };
 }

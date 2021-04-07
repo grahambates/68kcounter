@@ -1,12 +1,12 @@
 import { applyN, lookupTiming } from "../src/timings";
 import { OperandType } from "../src/operands";
-import { Statement } from "../src";
-import { Size } from "../src/instructions";
+import { Instruction } from "../src";
+import { Size } from "../src/mnemonics";
 
 describe("lookupTiming", () => {
   test("move.w d0,d1", () => {
-    const stmt: Statement = {
-      instruction: "MOVE",
+    const stmt: Instruction = {
+      mnemonic: "MOVE",
       size: Size.W,
       source: { text: "d0", type: OperandType.Dn },
       dest: { text: "d1", type: OperandType.Dn },
@@ -15,8 +15,8 @@ describe("lookupTiming", () => {
   });
 
   test("add.w (a0),d1", () => {
-    const stmt: Statement = {
-      instruction: "ADD",
+    const stmt: Instruction = {
+      mnemonic: "ADD",
       size: Size.W,
       source: { text: "(a0)", type: OperandType.AnIndir },
       dest: { text: "d1", type: OperandType.Dn },
@@ -25,8 +25,8 @@ describe("lookupTiming", () => {
   });
 
   test("bsr.w foo", () => {
-    const stmt: Statement = {
-      instruction: "BSR",
+    const stmt: Instruction = {
+      mnemonic: "BSR",
       size: Size.W,
       dest: { text: "foo", type: OperandType.AbsL },
     };
@@ -35,8 +35,8 @@ describe("lookupTiming", () => {
 
   test("movem.l d0-a6,-(sp)", () => {
     const n = 15;
-    const stmt: Statement = {
-      instruction: "MOVEM",
+    const stmt: Instruction = {
+      mnemonic: "MOVEM",
       size: Size.L,
       source: { text: "d0-a6", type: OperandType.RegList, value: n },
       dest: { text: "-(sp)", type: OperandType.AnPreDec },
@@ -51,8 +51,8 @@ describe("lookupTiming", () => {
 
   test("lsl.w #4,d0", () => {
     const n = 4;
-    const stmt: Statement = {
-      instruction: "LSL",
+    const stmt: Instruction = {
+      mnemonic: "LSL",
       size: Size.W,
       source: { text: "#4", type: OperandType.Imm, value: n },
       dest: { text: "d0", type: OperandType.Dn },

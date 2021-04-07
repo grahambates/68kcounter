@@ -1,25 +1,25 @@
-import { Statement } from ".";
-import { Size } from "./instructions";
+import { Instruction } from ".";
+import { Mnemonic, Size } from "./mnemonics";
 import { OperandType } from "./operands";
 
 /**
  * Get word size of statement
  */
-export function getWords(statement: Statement): number {
-  const { instruction, size, source } = statement;
+export function getWords(instruction: Instruction): number {
+  const { mnemonic, size, source } = instruction;
 
   if (source && source.type === OperandType.Imm) {
-    const immInstrs = ["AND", "ADD", "SUB", "OR", "CMP", "EOR"];
-    if (immInstrs.includes(instruction)) {
+    const immediate: Mnemonic[] = ["AND", "ADD", "SUB", "OR", "CMP", "EOR"];
+    if (immediate.includes(mnemonic)) {
       return size === Size.L ? 3 : 2;
     }
-    const bitInstrs = ["BCHG", "BCLR", "BTST"];
-    if (bitInstrs.includes(instruction)) {
+    const bitOps: Mnemonic[] = ["BCHG", "BCLR", "BTST"];
+    if (bitOps.includes(mnemonic)) {
       return 2;
     }
   }
 
-  const bccInstrs = [
+  const bcc: Mnemonic[] = [
     "BRA",
     "BCC",
     "BCS",
@@ -36,11 +36,11 @@ export function getWords(statement: Statement): number {
     "BVS",
     "BSR",
   ];
-  if (bccInstrs.includes(instruction)) {
+  if (bcc.includes(mnemonic)) {
     return size === Size.B ? 1 : 2;
   }
 
-  const doubleInstrs = [
+  const doubles: Mnemonic[] = [
     "DBF",
     "DBT",
     "DBCC",
@@ -61,7 +61,7 @@ export function getWords(statement: Statement): number {
     "MOVEP",
     "STOP",
   ];
-  if (doubleInstrs.includes(instruction)) {
+  if (doubles.includes(mnemonic)) {
     return 2;
   }
 

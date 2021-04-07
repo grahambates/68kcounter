@@ -1,6 +1,6 @@
 import fs from "fs";
 import { OperandType } from "../src/operands";
-import { Size } from "../src/instructions";
+import { Size } from "../src/mnemonics";
 import parse, { Line, parseLine } from "../src";
 
 describe("parse()", () => {
@@ -14,8 +14,8 @@ describe("parse()", () => {
       { text: "label:", label: "label" },
       {
         text: "         MOVE.W  #1,d0 ; Comment",
-        statement: {
-          instruction: "MOVE",
+        instruction: {
+          mnemonic: "MOVE",
           size: Size.W,
           source: { text: "#1", type: OperandType.Imm, value: 1 },
           dest: { text: "d0", type: OperandType.Dn },
@@ -26,8 +26,8 @@ describe("parse()", () => {
       { text: "         ; Comment" },
       {
         text: "         MOVE.W  d0,d1",
-        statement: {
-          instruction: "MOVE",
+        instruction: {
+          mnemonic: "MOVE",
           size: Size.W,
           source: { text: "d0", type: OperandType.Dn },
           dest: { text: "d1", type: OperandType.Dn },
@@ -51,8 +51,8 @@ describe("parseLine()", () => {
     const text = "     MOVE.W  #1,d0";
     const expected: Line = {
       text,
-      statement: {
-        instruction: "MOVE",
+      instruction: {
+        mnemonic: "MOVE",
         size: Size.W,
         source: { text: "#1", type: OperandType.Imm, value: 1 },
         dest: { text: "d0", type: OperandType.Dn },
@@ -67,8 +67,8 @@ describe("parseLine()", () => {
     const text = "\t\t\tMOVE.W\t\t#1,d0";
     const expected: Line = {
       text,
-      statement: {
-        instruction: "MOVE",
+      instruction: {
+        mnemonic: "MOVE",
         size: Size.W,
         source: { text: "#1", type: OperandType.Imm, value: 1 },
         dest: { text: "d0", type: OperandType.Dn },
@@ -83,8 +83,8 @@ describe("parseLine()", () => {
     const text = "     move.w #1,D0";
     const expected: Line = {
       text,
-      statement: {
-        instruction: "MOVE",
+      instruction: {
+        mnemonic: "MOVE",
         size: Size.W,
         source: { text: "#1", type: OperandType.Imm, value: 1 },
         dest: { text: "D0", type: OperandType.Dn },
@@ -99,8 +99,8 @@ describe("parseLine()", () => {
     const text = "     MOVE.W #1,d0    ; ignore this";
     const expected: Line = {
       text,
-      statement: {
-        instruction: "MOVE",
+      instruction: {
+        mnemonic: "MOVE",
         size: Size.W,
         source: { text: "#1", type: OperandType.Imm, value: 1 },
         dest: { text: "d0", type: OperandType.Dn },
@@ -116,8 +116,8 @@ describe("parseLine()", () => {
     const expected: Line = {
       text,
       label: "l0",
-      statement: {
-        instruction: "MOVE",
+      instruction: {
+        mnemonic: "MOVE",
         size: Size.W,
         source: { text: "#1", type: OperandType.Imm, value: 1 },
         dest: { text: "d0", type: OperandType.Dn },
@@ -133,8 +133,8 @@ describe("parseLine()", () => {
     const expected: Line = {
       text,
       label: "l0",
-      statement: {
-        instruction: "MOVE",
+      instruction: {
+        mnemonic: "MOVE",
         size: Size.W,
         source: { text: "#1", type: OperandType.Imm, value: 1 },
         dest: { text: "d0", type: OperandType.Dn },
@@ -149,8 +149,8 @@ describe("parseLine()", () => {
     const text = "     CLR.W d0";
     const expected: Line = {
       text,
-      statement: {
-        instruction: "CLR",
+      instruction: {
+        mnemonic: "CLR",
         size: Size.W,
         dest: { text: "d0", type: OperandType.Dn },
       },
@@ -164,8 +164,8 @@ describe("parseLine()", () => {
     const text = "     RTS";
     const expected: Line = {
       text,
-      statement: {
-        instruction: "RTS",
+      instruction: {
+        mnemonic: "RTS",
         size: Size.NA,
       },
       timings: { clock: 16, read: 4, write: 0 },

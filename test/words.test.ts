@@ -1,4 +1,4 @@
-import { Size } from "../src/instructions";
+import { Size } from "../src/mnemonics";
 import { OperandType } from "../src/operands";
 import { getWords } from "../src/words";
 
@@ -6,7 +6,7 @@ describe("getWords", () => {
   test("immediate B", () => {
     expect(
       getWords({
-        instruction: "ADD",
+        mnemonic: "ADD",
         size: Size.B,
         source: { type: OperandType.Imm, text: "#1" },
         dest: { type: OperandType.Dn, text: "d0" },
@@ -17,7 +17,7 @@ describe("getWords", () => {
   test("immediate W", () => {
     expect(
       getWords({
-        instruction: "ADD",
+        mnemonic: "ADD",
         size: Size.W,
         source: { type: OperandType.Imm, text: "#1" },
         dest: { type: OperandType.Dn, text: "d0" },
@@ -28,7 +28,7 @@ describe("getWords", () => {
   test("immediate L", () => {
     expect(
       getWords({
-        instruction: "ADD",
+        mnemonic: "ADD",
         size: Size.L,
         source: { type: OperandType.Imm, text: "#1" },
         dest: { type: OperandType.Dn, text: "d0" },
@@ -39,7 +39,7 @@ describe("getWords", () => {
   test("bit", () => {
     expect(
       getWords({
-        instruction: "BCHG",
+        mnemonic: "BCHG",
         size: Size.B,
         source: { type: OperandType.Imm, text: "#1" },
         dest: { type: OperandType.Dn, text: "d0" },
@@ -50,7 +50,7 @@ describe("getWords", () => {
   test("Bcc B", () => {
     expect(
       getWords({
-        instruction: "BRA",
+        mnemonic: "BRA",
         size: Size.B,
         dest: { type: OperandType.AbsW, text: "foo" },
       })
@@ -60,7 +60,7 @@ describe("getWords", () => {
   test("Bcc W", () => {
     expect(
       getWords({
-        instruction: "BRA",
+        mnemonic: "BRA",
         size: Size.W,
         dest: { type: OperandType.AbsW, text: "foo" },
       })
@@ -70,7 +70,7 @@ describe("getWords", () => {
   test("DBcc", () => {
     expect(
       getWords({
-        instruction: "DBF",
+        mnemonic: "DBF",
         size: Size.W,
         dest: { type: OperandType.AbsW, text: "foo" },
       })
@@ -80,7 +80,7 @@ describe("getWords", () => {
   test("MOVEM", () => {
     expect(
       getWords({
-        instruction: "DBF",
+        mnemonic: "DBF",
         size: Size.W,
         source: { type: OperandType.RegList, text: "d0-d6" },
         dest: { type: OperandType.AnPreDec, text: "-(sp)" },
