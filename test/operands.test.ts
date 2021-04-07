@@ -1,4 +1,45 @@
-import { lookupOperandType, OperandType } from "../src/operands";
+import {
+  evalImmediate,
+  lookupOperandType,
+  Operands,
+  OperandType,
+  parseOperandsText,
+  rangeN,
+  splitOperands,
+} from "../src/operands";
+
+describe("parseOperandsText", () => {
+  test("source and dest", () => {
+    const expected: Operands = {
+      source: { type: OperandType.DirectData, text: "d0" },
+      dest: { type: OperandType.DirectData, text: "d1" },
+    };
+    expect(parseOperandsText("d0,d1")).toEqual(expected);
+  });
+
+  test("dest only", () => {
+    const expected: Operands = {
+      dest: { type: OperandType.DirectData, text: "d1" },
+    };
+    expect(parseOperandsText("d1")).toEqual(expected);
+  });
+
+  test("with immediate value", () => {
+    const expected: Operands = {
+      source: { type: OperandType.Immediate, text: "#1", value: 1 },
+      dest: { type: OperandType.DirectData, text: "d1" },
+    };
+    expect(parseOperandsText("#1,d1")).toEqual(expected);
+  });
+
+  test("with range value", () => {
+    const expected: Operands = {
+      source: { type: OperandType.RegList, text: "d0-d6", value: 7 },
+      dest: { type: OperandType.IndirectPre, text: "-(sr)" },
+    };
+    expect(parseOperandsText("d0-d6,-(sr)")).toEqual(expected);
+  });
+});
 
 describe("lookupArgType", () => {
   test("direct data", () => {
@@ -89,5 +130,71 @@ describe("lookupArgType", () => {
 
   test("case insensitive", () => {
     expect(lookupOperandType("D0")).toEqual(OperandType.DirectData);
+  });
+});
+
+describe("splitParams()", () => {
+  test("split simple", () => {
+    expect(splitOperands("foo,bar")).toEqual(["foo", "bar"]);
+  });
+
+  test("first with parens", () => {
+    expect(splitOperands("1(a0,d0),bar")).toEqual(["1(a0,d0)", "bar"]);
+  });
+
+  test("second with parens", () => {
+    expect(splitOperands("foo,1(a0,d0)")).toEqual(["foo", "1(a0,d0)"]);
+  });
+});
+
+describe("rangeCount", () => {
+  test("single range", () => {
+    expect(rangeN("d0-d4")).toEqual(5);
+  });
+
+  test("multiple regs", () => {
+    expect(rangeN("d0/d4/d6")).toEqual(3);
+  });
+
+  test("two ranges", () => {
+    expect(rangeN("d0-d4/a0-a2")).toEqual(8);
+  });
+
+  test("mixed", () => {
+    expect(rangeN("d0-d4/d6/a0-a2/a4")).toEqual(10);
+  });
+
+  test("combined range", () => {
+    expect(rangeN("d0-a6")).toEqual(15);
+  });
+});
+
+describe("parseImmediate", () => {
+  test("decimal", () => {
+    expect(evalImmediate("3")).toEqual(3);
+  });
+
+  test("hex", () => {
+    expect(evalImmediate("$ff")).toEqual(255);
+  });
+
+  test("binary", () => {
+    expect(evalImmediate("%110")).toEqual(6);
+  });
+
+  test("addition", () => {
+    expect(evalImmediate("$2+%10+2")).toEqual(6);
+  });
+
+  test("power", () => {
+    expect(evalImmediate("4^2")).toEqual(16);
+  });
+
+  test("parens", () => {
+    expect(evalImmediate("(3+1)^2")).toEqual(16);
+  });
+
+  test("power", () => {
+    expect(evalImmediate("x+y", { x: 1, y: 2 })).toEqual(3);
   });
 });

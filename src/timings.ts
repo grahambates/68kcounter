@@ -25,17 +25,19 @@ export function lookupTiming(stmt: Statement): Timing | Timing[] | null {
       .filter(Boolean)
       .join(",") || NONE;
 
+  const n: number = source?.value || dest?.value || 0;
+
   // Try specified / default size:
   const sizeTiming = instructionTiming[size];
   if (sizeTiming && sizeTiming[key]) {
-    return applyNMultiple(sizeTiming[key], stmt.n);
+    return applyNMultiple(sizeTiming[key], n);
   }
 
   // Use first matching size if specified size/operands aren't found in table:
   for (const s in instructionTiming) {
     const sizeTiming = instructionTiming[s as Size];
     if (sizeTiming && sizeTiming[key]) {
-      return applyNMultiple(sizeTiming[key], stmt.n);
+      return applyNMultiple(sizeTiming[key], n);
     }
   }
   return null;

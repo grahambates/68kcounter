@@ -8,8 +8,8 @@ describe("getWords", () => {
       getWords({
         instruction: "ADD",
         size: Size.B,
-        source: { type: OperandType.Immediate, value: "#1" },
-        dest: { type: OperandType.DirectData, value: "d0" },
+        source: { type: OperandType.Immediate, text: "#1" },
+        dest: { type: OperandType.DirectData, text: "d0" },
       })
     ).toEqual(2);
   });
@@ -19,8 +19,8 @@ describe("getWords", () => {
       getWords({
         instruction: "ADD",
         size: Size.W,
-        source: { type: OperandType.Immediate, value: "#1" },
-        dest: { type: OperandType.DirectData, value: "d0" },
+        source: { type: OperandType.Immediate, text: "#1" },
+        dest: { type: OperandType.DirectData, text: "d0" },
       })
     ).toEqual(2);
   });
@@ -30,8 +30,8 @@ describe("getWords", () => {
       getWords({
         instruction: "ADD",
         size: Size.L,
-        source: { type: OperandType.Immediate, value: "#1" },
-        dest: { type: OperandType.DirectData, value: "d0" },
+        source: { type: OperandType.Immediate, text: "#1" },
+        dest: { type: OperandType.DirectData, text: "d0" },
       })
     ).toEqual(3);
   });
@@ -41,8 +41,8 @@ describe("getWords", () => {
       getWords({
         instruction: "BCHG",
         size: Size.B,
-        source: { type: OperandType.Immediate, value: "#1" },
-        dest: { type: OperandType.DirectData, value: "d0" },
+        source: { type: OperandType.Immediate, text: "#1" },
+        dest: { type: OperandType.DirectData, text: "d0" },
       })
     ).toEqual(2);
   });
@@ -52,7 +52,7 @@ describe("getWords", () => {
       getWords({
         instruction: "BRA",
         size: Size.B,
-        dest: { type: OperandType.AbsoluteW, value: "foo" },
+        dest: { type: OperandType.AbsoluteW, text: "foo" },
       })
     ).toEqual(1);
   });
@@ -62,7 +62,7 @@ describe("getWords", () => {
       getWords({
         instruction: "BRA",
         size: Size.W,
-        dest: { type: OperandType.AbsoluteW, value: "foo" },
+        dest: { type: OperandType.AbsoluteW, text: "foo" },
       })
     ).toEqual(2);
   });
@@ -72,7 +72,7 @@ describe("getWords", () => {
       getWords({
         instruction: "DBF",
         size: Size.W,
-        dest: { type: OperandType.AbsoluteW, value: "foo" },
+        dest: { type: OperandType.AbsoluteW, text: "foo" },
       })
     ).toEqual(2);
   });
@@ -82,8 +82,8 @@ describe("getWords", () => {
       getWords({
         instruction: "DBF",
         size: Size.W,
-        source: { type: OperandType.RegList, value: "d0-d6" },
-        dest: { type: OperandType.IndirectPre, value: "-(sp)" },
+        source: { type: OperandType.RegList, text: "d0-d6" },
+        dest: { type: OperandType.IndirectPre, text: "-(sp)" },
       })
     ).toEqual(2);
   });

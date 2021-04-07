@@ -109,6 +109,57 @@ export enum Size {
   NA = "NA",
 }
 
+/**
+ * Parse text to extract instruction mnemonic and size
+ *
+ * @param text Code segment to parse e.g. "MOVE.L"
+ */
+export function parseInstructionText(
+  text: string
+): { instruction: Instruction; size: Size } | null {
+  const instParts = text.toUpperCase().split(".");
+
+  let instruction = instParts[0];
+  if (instructionAliases[instruction]) {
+    instruction = instructionAliases[instruction];
+  }
+  if (!isInstruction(instruction)) {
+    return null;
+  }
+
+  let size = instParts[1] || instructions[instruction][0];
+  // Alias short as byte
+  if (size === "S") {
+    size = "B";
+  }
+  if (!isInstructionSize(size)) {
+    return null;
+  }
+
+  return {
+    instruction,
+    size,
+  };
+}
+
+// Typeguards:
+
+/**
+ * Check if string is a valid instruction
+ */
+export function isInstruction(v: string): v is Instruction {
+  return instructions[v as Instruction] !== undefined;
+}
+
+/**
+ * Check if string is a valid instruction size
+ */
+export function isInstructionSize(v: string): v is Size {
+  return [Size.B, Size.W, Size.L, Size.NA].includes(v as Size);
+}
+
+// Build map of instructions and their supported sizes.
+
 const b: Size[] = [Size.B];
 const w: Size[] = [Size.W];
 const l: Size[] = [Size.L];
@@ -118,17 +169,7 @@ const wl: Size[] = [Size.W, Size.L];
 const bl: Size[] = [Size.B, Size.L];
 const na: Size[] = [Size.NA];
 
-/**
- * Check if string is a valid instruction size
- */
-export function isInstructionSize(v: string): v is Size {
-  return [Size.B, Size.W, Size.L, Size.NA].includes(v as Size);
-}
-
-/**
- * List instructions and their supported sizes.
- */
-export const instructions: Record<Instruction, Size[]> = {
+const instructions: Record<Instruction, Size[]> = {
   ABCD: b,
   ADD: bwl,
   ADDQ: bwl,
@@ -233,16 +274,9 @@ export const instructions: Record<Instruction, Size[]> = {
 };
 
 /**
- * Check if string is a valid instruction
- */
-export function isInstruction(v: string): v is Instruction {
-  return instructions[v as Instruction] !== undefined;
-}
-
-/**
  * Map alternate to canonical instruction names used in our mappings.
  */
-export const instructionAliases: Record<string, Instruction> = {
+const instructionAliases: Record<string, Instruction> = {
   // Alternative mnemonics
   BLO: "BCS",
   DBLO: "DBCS",
@@ -257,5 +291,3 @@ export const instructionAliases: Record<string, Instruction> = {
   CMPI: "CMP",
   SUBI: "SUB",
 };
-
-export default instructions;
