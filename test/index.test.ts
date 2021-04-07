@@ -28,6 +28,7 @@ describe("parse()", () => {
           dest: { value: "d0", type: OperandType.DirectData },
         },
         timings: { clock: 8, read: 2, write: 0 },
+        words: 1,
       },
       { text: "         ; Comment" },
       {
@@ -39,6 +40,7 @@ describe("parse()", () => {
           dest: { value: "d1", type: OperandType.DirectData },
         },
         timings: { clock: 4, read: 1, write: 0 },
+        words: 1,
       },
     ]);
   });
@@ -62,6 +64,7 @@ describe("parseLine()", () => {
         dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
+      words: 1,
     });
   });
 
@@ -77,6 +80,7 @@ describe("parseLine()", () => {
         dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
+      words: 1,
     });
   });
 
@@ -92,6 +96,7 @@ describe("parseLine()", () => {
         dest: { value: "D0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
+      words: 1,
     });
   });
 
@@ -107,6 +112,7 @@ describe("parseLine()", () => {
         dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
+      words: 1,
     });
   });
 
@@ -123,6 +129,7 @@ describe("parseLine()", () => {
         dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
+      words: 1,
     });
   });
 
@@ -139,6 +146,7 @@ describe("parseLine()", () => {
         dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
+      words: 1,
     });
   });
 
@@ -154,6 +162,7 @@ describe("parseLine()", () => {
         dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 8, read: 2, write: 0 },
+      words: 1,
     });
   });
 
@@ -173,6 +182,7 @@ describe("parseLine()", () => {
         { clock: 10, read: 2, write: 0 },
         { clock: 12, read: 1, write: 0 },
       ],
+      words: 2,
     });
   });
 
@@ -186,6 +196,7 @@ describe("parseLine()", () => {
         dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 4, read: 1, write: 0 },
+      words: 1,
     });
   });
 
@@ -201,6 +212,7 @@ describe("parseLine()", () => {
         dest: { value: "d0", type: OperandType.DirectData },
       },
       timings: { clock: 4, read: 1, write: 0 },
+      words: 1,
     });
   });
 
@@ -213,6 +225,7 @@ describe("parseLine()", () => {
         size: Size.NA,
       },
       timings: { clock: 16, read: 4, write: 0 },
+      words: 1,
     });
   });
 

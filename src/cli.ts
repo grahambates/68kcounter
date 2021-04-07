@@ -28,5 +28,8 @@ lines.forEach((l) => {
       annotation += formatTiming(l.timings);
     }
   }
-  console.log(annotation.padStart(28) + " | " + l.text);
+  if (l.words) {
+    annotation += " " + l.words;
+  }
+  console.log(annotation.padStart(30) + " | " + l.text);
 });

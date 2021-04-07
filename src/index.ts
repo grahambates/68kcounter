@@ -7,19 +7,21 @@ import {
   isInstructionSize,
   instructionAliases,
   Instruction,
-  InstructionSize,
+  Size,
 } from "./instructions";
+import { getWords } from "./words";
 
 export interface Line {
   text: string;
   label?: string;
   statement?: Statement;
   timings?: Timing | Timing[] | null;
+  words?: number;
 }
 
 export interface Statement {
   instruction: Instruction;
-  size: InstructionSize;
+  size: Size;
   source?: Operand;
   dest?: Operand;
   n?: number;
@@ -94,7 +96,13 @@ export function parseLine(
     statement.n = calcN(operands, vars);
   }
 
-  return { text, label, statement, timings: lookupTiming(statement) };
+  return {
+    text,
+    label,
+    statement,
+    timings: lookupTiming(statement),
+    words: getWords(statement),
+  };
 }
 
 /**
