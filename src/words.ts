@@ -2,6 +2,9 @@ import { Statement } from ".";
 import { Size } from "./instructions";
 import { OperandType } from "./operands";
 
+/**
+ * Get word size of statement
+ */
 export function getWords(statement: Statement): number {
   const { instruction, size, source } = statement;
 

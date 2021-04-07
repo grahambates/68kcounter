@@ -41,10 +41,6 @@ export function lookupTiming(stmt: Statement): Timing | Timing[] | null {
   return null;
 }
 
-export function formatTiming(timing: Timing): string {
-  return `${timing.clock}(${timing.read}/${timing.write})`;
-}
-
 /**
  * Extend Timing internally to include info about n multipliers
  */

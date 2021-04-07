@@ -36,6 +36,7 @@
     "typescript": "^4.2.3"
   },
   "dependencies": {
+    "chalk": "^4.1.0",
     "expr-eval": "^2.0.2"
   }
 }
