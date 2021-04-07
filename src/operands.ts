@@ -10,6 +10,12 @@ export interface Operand {
   value?: number;
 }
 
+export enum OperandGroup {
+  M = "M",
+  EA = "EA",
+  DI = "DI",
+}
+
 export type Operands = { source?: Operand; dest?: Operand };
 
 export enum OperandType {
@@ -57,6 +63,39 @@ export function parseOperandsText(str: string, vars: Vars = {}): Operands {
   }
   return srcDest;
 }
+
+export function isOperandGroup(v: string): v is OperandGroup {
+  return Object.values(OperandGroup).includes(v as OperandGroup);
+}
+
+export const operandGroups = {
+  [OperandGroup.EA]: [
+    OperandType.Dn,
+    OperandType.An,
+    OperandType.AnIndir,
+    OperandType.AnPostInc,
+    OperandType.AnPreDec,
+    OperandType.AnDisp,
+    OperandType.AnDispIx,
+    OperandType.PcDisp,
+    OperandType.PcDispIx,
+    OperandType.AbsW,
+    OperandType.AbsL,
+    OperandType.Imm,
+  ],
+  [OperandGroup.DI]: [OperandType.Dn, OperandType.An, OperandType.Imm],
+  [OperandGroup.M]: [
+    OperandType.AnIndir,
+    OperandType.AnPostInc,
+    OperandType.AnPreDec,
+    OperandType.AnDisp,
+    OperandType.AnDispIx,
+    OperandType.PcDisp,
+    OperandType.PcDispIx,
+    OperandType.AbsW,
+    OperandType.AbsL,
+  ],
+};
 
 /**
  * Split operands on comma, ignoring any inside parentheses.

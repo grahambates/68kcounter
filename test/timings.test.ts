@@ -1,4 +1,4 @@
-import { applyN, lookupTiming } from "../src/timings";
+import { lookupTiming } from "../src/timings";
 import { OperandType } from "../src/operands";
 import { Instruction } from "../src";
 import { Size } from "../src/mnemonics";
@@ -63,39 +63,5 @@ describe("lookupTiming", () => {
       read: 1,
       write: 0,
     });
-  });
-});
-
-describe("applyN", () => {
-  test("nClock", () => {
-    const timing = applyN({ clock: 1, read: 1, write: 1, nClock: 2 }, 3);
-    expect(timing).toEqual({ clock: 1 + 2 * 3, read: 1, write: 1 });
-  });
-
-  test("nRead", () => {
-    const timing = applyN({ clock: 1, read: 1, write: 1, nRead: 2 }, 3);
-    expect(timing).toEqual({ clock: 1, read: 1 + 2 * 3, write: 1 });
-  });
-
-  test("nWrite", () => {
-    const timing = applyN({ clock: 1, read: 1, write: 1, nWrite: 2 }, 3);
-    expect(timing).toEqual({ clock: 1, read: 1, write: 1 + 2 * 3 });
-  });
-
-  test("multiple", () => {
-    const timing = applyN(
-      { clock: 1, read: 1, write: 1, nClock: 2, nRead: 3, nWrite: 4 },
-      3
-    );
-    expect(timing).toEqual({
-      clock: 1 + 2 * 3,
-      read: 1 + 3 * 3,
-      write: 1 + 4 * 3,
-    });
-  });
-
-  test("unchanged", () => {
-    const timing = applyN({ clock: 1, read: 1, write: 1 }, 3);
-    expect(timing).toEqual({ clock: 1, read: 1, write: 1 });
   });
 });

@@ -1,6 +1,6 @@
 import { lookupTiming, Timing } from "./timings";
 import { Operand, parseOperandsText } from "./operands";
-import { Mnemonic, parseMnemonicText, Size } from "./mnemonics";
+import { Mnemonic, parseMnemonicText, mnemonicSizes, Size } from "./mnemonics";
 import { getWords } from "./words";
 
 /** Parsed line of code */
@@ -51,11 +51,28 @@ export function parseLine(text: string, vars: Vars = {}): Line {
     };
   }
 
+  let timings = lookupTiming(instruction);
+
+  if (!timings) {
+    // Timing not found - try other possible sizes for this mnemonic
+    for (const size of mnemonicSizes[instruction.mnemonic]) {
+      timings = lookupTiming({ ...instruction, size });
+      if (timings) {
+        instruction.size = size;
+        break;
+      }
+    }
+  }
+
+  if (!timings) {
+    console.warn("Timing not found for instruction", instruction);
+  }
+
   return {
     text,
     label,
     instruction,
-    timings: lookupTiming(instruction),
+    timings,
     words: getWords(instruction),
   };
 }

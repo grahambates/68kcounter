@@ -1,5 +1,10 @@
 import { Instruction } from ".";
-import { OperandType } from "./operands";
+import {
+  OperandType,
+  OperandGroup,
+  isOperandGroup,
+  operandGroups,
+} from "./operands";
 import { Mnemonic, Size } from "./mnemonics";
 
 /**
@@ -12,137 +17,55 @@ export interface Timing {
 }
 
 /**
- * Look up timing information for a parsed operation
+ * Look up timing information for a parsed instruction
  */
 export function lookupTiming(
   instruction: Instruction
 ): Timing | Timing[] | null {
   const { mnemonic, size, source, dest } = instruction;
-  const mnemTimings = timings[mnemonic];
 
-  // Convert operands list to string for use as key
-  const key =
-    [source, dest]
-      .map((o) => o && o.type)
-      .filter(Boolean)
-      .join(",") || NONE;
+  // Build string key for map lookup:
+  let key = mnemonic;
+  if (size !== NA) {
+    key += "." + size;
+  }
+  if (source && dest) {
+    key += ` ${source.type},${dest.type}`;
+  } else if (dest) {
+    key += ` ${dest.type}`;
+  }
 
+  const times = timingMap[key];
+  if (!times) {
+    return null;
+  }
+
+  // Find value to use for n multipliers
   const n: number = source?.value || dest?.value || 0;
 
-  // Try specified / default size:
-  const sizeTiming = mnemTimings[size];
-  if (sizeTiming && sizeTiming[key]) {
-    return applyNMultiple(sizeTiming[key], n);
-  }
+  // Convert tuple to structured timing object and apply n multipliers
+  const toTiming = (t: TimeTuple): Timing => {
+    const [clock, read, write, nClock, nRead, nWrite] = t;
+    const timing: Timing = { clock, read, write };
 
-  // Use first matching size if specified size/operands aren't found in table:
-  for (const s in mnemTimings) {
-    const sizeTiming = mnemTimings[s as Size];
-    if (sizeTiming && sizeTiming[key]) {
-      return applyNMultiple(sizeTiming[key], n);
+    if (nClock) {
+      timing.clock += n * nClock;
     }
-  }
-  return null;
-}
-
-/**
- * Extend Timing internally to include info about n multipliers
- */
-type TimingN = Timing & TimingNOpts;
-
-/** Optional n multiplier properties */
-type TimingNOpts = {
-  /** clock += n*x */
-  nClock?: number;
-  /** read += n*x */
-  nRead?: number;
-  /** write += n*x */
-  nWrite?: number;
-};
-
-/**
- * Apply n multipliers to return a simple timing object
- *
- * @param timing timing object with optional n multipliers
- * @param n Value from operands which can influence the total timings
- */
-export function applyN(timing: TimingN, n: number): Timing {
-  let { clock, read, write } = timing;
-  if (timing.nClock) {
-    clock += n * timing.nClock;
-  }
-  if (timing.nRead) {
-    read += n * timing.nRead;
-  }
-  if (timing.nWrite) {
-    write += n * timing.nWrite;
-  }
-  return { clock, read, write };
-}
-
-function applyNMultiple(
-  timing: Timing | Timing[],
-  n?: number
-): Timing | Timing[] {
-  if (!n) {
+    if (nRead) {
+      timing.read += n * nRead;
+    }
+    if (nWrite) {
+      timing.write += n * nWrite;
+    }
     return timing;
-  }
-  return Array.isArray(timing)
-    ? timing.map((t) => applyN(t, n))
-    : applyN(timing, n);
-}
-
-/**
- * Maps comma separated ArgTypes to Timing(s)
- *
- * e.g. `"#xxx,Dn": { clock: 3, read: 1, write: 0 }`
- * Can be array of timings in case of branch followed true/false
- */
-type TimingMap = Record<string, TimingN | TimingN[]>;
-
-// Value to use for key in TimingMap for instructions with no operands
-const NONE = "<none>";
-
-/**
- * Factory function for timing info
- */
-const timing = (
-  clock: number,
-  read: number,
-  write: number,
-  opts: TimingNOpts = {}
-): TimingN => ({
-  clock,
-  read,
-  write,
-  ...opts,
-});
-
-/**
- * Add together two timing objects
- */
-function addTimings(a: TimingN, b: TimingN): TimingN {
-  return {
-    clock: a.clock + b.clock,
-    read: a.read + b.read,
-    write: a.write + b.write,
-    // Only one of the timings will have options set
-    nClock: a.nClock || b.nClock,
-    nRead: a.nRead || b.nRead,
-    nWrite: a.nWrite || b.nWrite,
   };
-}
 
-// Effective Address Calculation Times:
-
-type EaTimings = Record<EaSize, Timing>;
-enum EaSize {
-  WB = "wordByte",
-  L = "long",
+  return isMultiTime(times) ? times.map(toTiming) : toTiming(times);
 }
 
 // Extract these as vars as we'll be using them a lot!
-const { WB, L } = EaSize;
+const { B, W, L, NA } = Size;
+const { DI, EA, M } = OperandGroup;
 const {
   Dn,
   An,
@@ -156,736 +79,584 @@ const {
   AbsW,
   AbsL,
   Imm,
+  RegList,
 } = OperandType;
 
-const eaMem: Record<string, EaTimings> = {
-  [AnIndir]: {
-    wordByte: timing(4, 1, 0),
-    long: timing(8, 2, 0),
-  },
-  [AnPostInc]: {
-    wordByte: timing(4, 1, 0),
-    long: timing(8, 2, 0),
-  },
-  [AnPreDec]: {
-    wordByte: timing(6, 1, 0),
-    long: timing(10, 2, 0),
-  },
-  [AnDisp]: {
-    wordByte: timing(8, 2, 0),
-    long: timing(12, 3, 0),
-  },
-  [AnDispIx]: {
-    wordByte: timing(10, 2, 0),
-    long: timing(14, 3, 0),
-  },
-  [PcDisp]: {
-    wordByte: timing(8, 2, 0),
-    long: timing(12, 3, 0),
-  },
-  [PcDispIx]: {
-    wordByte: timing(10, 2, 0),
-    long: timing(14, 3, 0),
-  },
-  [AbsW]: {
-    wordByte: timing(8, 2, 0),
-    long: timing(12, 3, 0),
-  },
-  [AbsL]: {
-    wordByte: timing(12, 3, 0),
-    long: timing(16, 4, 0),
-  },
+// Effective Address Calculation Times:
+
+// prettier-ignore
+const eaLookup: Record<string, [TimeTuple, TimeTuple]> = {
+                // B/W        // L
+  [Dn]:         [[0, 0, 0],   [0, 0, 0]],
+  [An]:         [[0, 0, 0],   [0, 0, 0]],
+  [Imm]:        [[4, 1, 0],   [8, 2, 0]],
+  [AnIndir]:    [[4, 1, 0],   [8, 2, 0]],
+  [AnPostInc]:  [[4, 1, 0],   [8, 2, 0]],
+  [AnPreDec]:   [[6, 1, 0],   [10, 2, 0]],
+  [AnDisp]:     [[8, 2, 0],   [12, 3, 0]],
+  [AnDispIx]:   [[10, 2, 0],  [14, 3, 0]],
+  [PcDisp]:     [[8, 2, 0],   [12, 3, 0]],
+  [PcDispIx]:   [[10, 2, 0],  [14, 3, 0]],
+  [AbsW]:       [[8, 2, 0],   [12, 3, 0]],
+  [AbsL]:       [[12, 3, 0],  [16, 4, 0]],
 };
 
-const eaDirectImmediate: Record<string, EaTimings> = {
-  [Dn]: {
-    wordByte: timing(0, 0, 0),
-    long: timing(0, 0, 0),
-  },
-  [An]: {
-    wordByte: timing(0, 0, 0),
-    long: timing(0, 0, 0),
-  },
-  [Imm]: {
-    wordByte: timing(4, 1, 0),
-    long: timing(8, 2, 0),
-  },
-};
+type TimeTuple = [number, number, number, number?, number?, number?];
+type TimingTable = [
+  Mnemonic[],
+  Size[],
+  (OperandType | OperandGroup)[],
+  TimeTuple | TimeTuple[]
+][];
 
-const eaAll: Record<string, EaTimings> = {
-  ...eaDirectImmediate,
-  ...eaMem,
-};
+// Define large groups here to keep our table manageable.
+const shiftRot: Mnemonic[] = [
+  "LSL",
+  "LSR",
+  "ASL",
+  "ASR",
+  "ROL",
+  "ROR",
+  "ROXL",
+  "ROXR",
+];
+const scc: Mnemonic[] = [
+  "SCC",
+  "SCS",
+  "SEQ",
+  "SGE",
+  "SGT",
+  "SHI",
+  "SLE",
+  "SLT",
+  "SMI",
+  "SNE",
+  "SPL",
+  "SVC",
+  "SVS",
+];
+const bcc: Mnemonic[] = [
+  "BCC",
+  "BCS",
+  "BEQ",
+  "BGE",
+  "BGT",
+  "BHI",
+  "BLE",
+  "BLT",
+  "BMI",
+  "BNE",
+  "BPL",
+];
+const dbcc: Mnemonic[] = [
+  "DBCC",
+  "DBCS",
+  "DBEQ",
+  "DBF",
+  "DBGE",
+  "DBGT",
+  "DBHI",
+  "DBLE",
+  "DBLT",
+  "DBMI",
+  "DBNE",
+  "DBPL",
+  "DBT",
+  "DBVC",
+  "DBVS",
+];
 
-// TimingMap builders to iterate over EA types and add to a base timing:
-// Multiple versions depending on whether EA is first, second or only param and separate
-// groups for Memory vs. Direct or Immediate types as these can have a different
-// base value.
+// prettier-ignore
+const tbl: TimingTable = [
+// Mnemonics:                Sizes:     Operand types:           Timings:
+// .                                    [source], dest           cycles, read, write, n multipliers
+  [["MOVE"],                 [B, W],    [Dn, Dn],                [4, 1, 0]],
+  [["MOVE"],                 [B, W],    [Dn, An],                [4, 1, 0]],
+  [["MOVE"],                 [B, W],    [Dn, AnIndir],           [8, 1, 1]],
+  [["MOVE"],                 [B, W],    [Dn, AnPostInc],         [8, 1, 1]],
+  [["MOVE"],                 [B, W],    [Dn, AnPreDec],          [8, 1, 1]],
+  [["MOVE"],                 [B, W],    [Dn, AnDisp],            [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [Dn, AnDispIx],          [14, 2, 1]],
+  [["MOVE"],                 [B, W],    [Dn, AbsW],              [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [Dn, AbsL],              [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [An, Dn],                [4, 1, 0]],
+  [["MOVE"],                 [B, W],    [An, An],                [4, 1, 0]],
+  [["MOVE"],                 [B, W],    [An, AnIndir],           [8, 1, 1]],
+  [["MOVE"],                 [B, W],    [An, AnPostInc],         [8, 1, 1]],
+  [["MOVE"],                 [B, W],    [An, AnPreDec],          [8, 1, 1]],
+  [["MOVE"],                 [B, W],    [An, AnDisp],            [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [An, AnDispIx],          [14, 2, 1]],
+  [["MOVE"],                 [B, W],    [An, AbsW],              [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [An, AbsL],              [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnIndir, Dn],           [8, 2, 0]],
+  [["MOVE"],                 [B, W],    [AnIndir, An],           [8, 2, 0]],
+  [["MOVE"],                 [B, W],    [AnIndir, AnIndir],      [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [AnIndir, AnPostInc],    [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [AnIndir, AnPreDec],     [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [AnIndir, AnDisp],       [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnIndir, AnDispIx],     [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnIndir, AbsW],         [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnIndir, AbsL],         [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnPostInc, Dn],         [8, 2, 0]],
+  [["MOVE"],                 [B, W],    [AnPostInc, An],         [8, 2, 0]],
+  [["MOVE"],                 [B, W],    [AnPostInc, AnIndir],    [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [AnPostInc, AnPostInc],  [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [AnPostInc, AnPreDec],   [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [AnPostInc, AnDisp],     [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnPostInc, AnDispIx],   [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnPostInc, AbsW],       [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnPostInc, AbsL],       [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnPreDec, Dn],          [10, 2, 0]],
+  [["MOVE"],                 [B, W],    [AnPreDec, An],          [10, 2, 0]],
+  [["MOVE"],                 [B, W],    [AnPreDec, AnIndir],     [14, 2, 1]],
+  [["MOVE"],                 [B, W],    [AnPreDec, AnPostInc],   [14, 2, 1]],
+  [["MOVE"],                 [B, W],    [AnPreDec, AnPreDec],    [14, 2, 1]],
+  [["MOVE"],                 [B, W],    [AnPreDec, AnDisp],      [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnPreDec, AnDispIx],    [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnPreDec, AbsW],        [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnPreDec, AbsL],        [22, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnDisp, Dn],            [12, 3, 0]],
+  [["MOVE"],                 [B, W],    [AnDisp, An],            [12, 3, 0]],
+  [["MOVE"],                 [B, W],    [AnDisp, AnIndir],       [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnDisp, AnPostInc],     [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnDisp, AnPreDec],      [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnDisp, AnDisp],        [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnDisp, AnDispIx],      [22, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnDisp, AbsW],          [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnDisp, AbsL],          [24, 5, 1]],
+  [["MOVE"],                 [B, W],    [AnDispIx, Dn],          [14, 3, 0]],
+  [["MOVE"],                 [B, W],    [AnDispIx, An],          [14, 3, 0]],
+  [["MOVE"],                 [B, W],    [AnDispIx, AnIndir],     [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnDispIx, AnPostInc],   [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnDispIx, AnPreDec],    [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [AnDispIx, AnDisp],      [22, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnDispIx, AnDispIx],    [24, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnDispIx, AbsW],        [22, 4, 1]],
+  [["MOVE"],                 [B, W],    [AnDispIx, AbsL],        [26, 5, 1]],
+  [["MOVE"],                 [B, W],    [AbsW, Dn],              [12, 3, 0]],
+  [["MOVE"],                 [B, W],    [AbsW, An],              [12, 3, 0]],
+  [["MOVE"],                 [B, W],    [AbsW, AnIndir],         [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AbsW, AnPostInc],       [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AbsW, AnPreDec],        [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [AbsW, AnDisp],          [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AbsW, AnDispIx],        [22, 4, 1]],
+  [["MOVE"],                 [B, W],    [AbsW, AbsW],            [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AbsW, AbsL],            [24, 5, 1]],
+  [["MOVE"],                 [B, W],    [AbsL, Dn],              [16, 4, 0]],
+  [["MOVE"],                 [B, W],    [AbsL, An],              [16, 4, 0]],
+  [["MOVE"],                 [B, W],    [AbsL, AnIndir],         [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AbsL, AnPostInc],       [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AbsL, AnPreDec],        [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [AbsL, AnDisp],          [24, 5, 1]],
+  [["MOVE"],                 [B, W],    [AbsL, AnDispIx],        [26, 5, 1]],
+  [["MOVE"],                 [B, W],    [AbsL, AbsW],            [24, 5, 1]],
+  [["MOVE"],                 [B, W],    [AbsL, AbsL],            [28, 6, 1]],
+  [["MOVE"],                 [B, W],    [PcDisp, Dn],            [12, 3, 0]],
+  [["MOVE"],                 [B, W],    [PcDisp, An],            [12, 3, 0]],
+  [["MOVE"],                 [B, W],    [PcDisp, AnIndir],       [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [PcDisp, AnPostInc],     [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [PcDisp, AnPreDec],      [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [PcDisp, AnDisp],        [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [PcDisp, AnDispIx],      [22, 4, 1]],
+  [["MOVE"],                 [B, W],    [PcDisp, AbsW],          [20, 4, 1]],
+  [["MOVE"],                 [B, W],    [PcDisp, AbsL],          [24, 5, 1]],
+  [["MOVE"],                 [B, W],    [PcDispIx, Dn],          [14, 3, 0]],
+  [["MOVE"],                 [B, W],    [PcDispIx, An],          [14, 3, 0]],
+  [["MOVE"],                 [B, W],    [PcDispIx, AnIndir],     [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [PcDispIx, AnPostInc],   [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [PcDispIx, AnPreDec],    [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [PcDispIx, AnDisp],      [22, 4, 1]],
+  [["MOVE"],                 [B, W],    [PcDispIx, AnDispIx],    [24, 4, 1]],
+  [["MOVE"],                 [B, W],    [PcDispIx, AbsW],        [22, 4, 1]],
+  [["MOVE"],                 [B, W],    [PcDispIx, AbsL],        [26, 5, 1]],
+  [["MOVE"],                 [B, W],    [Imm, Dn],               [8, 2, 0]],
+  [["MOVE"],                 [B, W],    [Imm, An],               [8, 2, 0]],
+  [["MOVE"],                 [B, W],    [Imm, AnIndir],          [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [Imm, AnPostInc],        [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [Imm, AnPreDec],         [12, 2, 1]],
+  [["MOVE"],                 [B, W],    [Imm, AnDisp],           [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [Imm, AnDispIx],         [18, 3, 1]],
+  [["MOVE"],                 [B, W],    [Imm, AbsW],             [16, 3, 1]],
+  [["MOVE"],                 [B, W],    [Imm, AbsL],             [20, 4, 1]],
 
-const unaryMem = (base: Timing, size: EaSize = WB): TimingMap =>
-  Object.keys(eaMem).reduce((acc, k) => {
-    acc[k] = addTimings(eaMem[k][size], base);
-    return acc;
-  }, {} as TimingMap);
+  [["MOVE"],                 [L],       [Dn, Dn],                [4, 1, 0]],
+  [["MOVE"],                 [L],       [Dn, An],                [4, 1, 0]],
+  [["MOVE"],                 [L],       [Dn, AnIndir],           [12, 1, 2]],
+  [["MOVE"],                 [L],       [Dn, AnPostInc],         [12, 1, 2]],
+  [["MOVE"],                 [L],       [Dn, AnPreDec],          [12, 1, 2]],
+  [["MOVE"],                 [L],       [Dn, AnDisp],            [16, 2, 2]],
+  [["MOVE"],                 [L],       [Dn, AnDispIx],          [18, 2, 2]],
+  [["MOVE"],                 [L],       [Dn, AbsW],              [16, 2, 2]],
+  [["MOVE"],                 [L],       [Dn, AbsL],              [20, 3, 2]],
+  [["MOVE"],                 [L],       [An, Dn],                [4, 1, 0]],
+  [["MOVE"],                 [L],       [An, An],                [4, 1, 0]],
+  [["MOVE"],                 [L],       [An, AnIndir],           [12, 1, 2]],
+  [["MOVE"],                 [L],       [An, AnPostInc],         [12, 1, 2]],
+  [["MOVE"],                 [L],       [An, AnPreDec],          [12, 1, 2]],
+  [["MOVE"],                 [L],       [An, AnDisp],            [16, 2, 2]],
+  [["MOVE"],                 [L],       [An, AnDispIx],          [18, 2, 2]],
+  [["MOVE"],                 [L],       [An, AbsW],              [16, 2, 2]],
+  [["MOVE"],                 [L],       [An, AbsL],              [20, 3, 2]],
+  [["MOVE"],                 [L],       [AnIndir, Dn],           [12, 3, 0]],
+  [["MOVE"],                 [L],       [AnIndir, An],           [12, 3, 0]],
+  [["MOVE"],                 [L],       [AnIndir, AnIndir],      [20, 3, 2]],
+  [["MOVE"],                 [L],       [AnIndir, AnPostInc],    [20, 3, 2]],
+  [["MOVE"],                 [L],       [AnIndir, AnPreDec],     [20, 3, 2]],
+  [["MOVE"],                 [L],       [AnIndir, AnDisp],       [24, 4, 2]],
+  [["MOVE"],                 [L],       [AnIndir, AnDispIx],     [26, 4, 2]],
+  [["MOVE"],                 [L],       [AnIndir, AbsW],         [24, 4, 2]],
+  [["MOVE"],                 [L],       [AnIndir, AbsL],         [28, 5, 2]],
+  [["MOVE"],                 [L],       [AnPostInc, Dn],         [12, 3, 0]],
+  [["MOVE"],                 [L],       [AnPostInc, An],         [12, 3, 0]],
+  [["MOVE"],                 [L],       [AnPostInc, AnIndir],    [20, 3, 2]],
+  [["MOVE"],                 [L],       [AnPostInc, AnPostInc],  [20, 3, 2]],
+  [["MOVE"],                 [L],       [AnPostInc, AnPreDec],   [20, 3, 2]],
+  [["MOVE"],                 [L],       [AnPostInc, AnDisp],     [24, 4, 2]],
+  [["MOVE"],                 [L],       [AnPostInc, AnDispIx],   [26, 4, 2]],
+  [["MOVE"],                 [L],       [AnPostInc, AbsW],       [24, 4, 2]],
+  [["MOVE"],                 [L],       [AnPostInc, AbsL],       [28, 5, 2]],
+  [["MOVE"],                 [L],       [AnPreDec, Dn],          [14, 3, 0]],
+  [["MOVE"],                 [L],       [AnPreDec, An],          [14, 3, 0]],
+  [["MOVE"],                 [L],       [AnPreDec, AnIndir],     [22, 3, 2]],
+  [["MOVE"],                 [L],       [AnPreDec, AnPostInc],   [22, 3, 2]],
+  [["MOVE"],                 [L],       [AnPreDec, AnPreDec],    [22, 3, 2]],
+  [["MOVE"],                 [L],       [AnPreDec, AnDisp],      [26, 4, 2]],
+  [["MOVE"],                 [L],       [AnPreDec, AnDispIx],    [28, 4, 2]],
+  [["MOVE"],                 [L],       [AnPreDec, AbsW],        [26, 4, 2]],
+  [["MOVE"],                 [L],       [AnPreDec, AbsL],        [30, 5, 2]],
+  [["MOVE"],                 [L],       [AnDisp, Dn],            [16, 4, 0]],
+  [["MOVE"],                 [L],       [AnDisp, An],            [16, 4, 0]],
+  [["MOVE"],                 [L],       [AnDisp, AnIndir],       [24, 4, 2]],
+  [["MOVE"],                 [L],       [AnDisp, AnPostInc],     [24, 4, 2]],
+  [["MOVE"],                 [L],       [AnDisp, AnPreDec],      [24, 4, 2]],
+  [["MOVE"],                 [L],       [AnDisp, AnDisp],        [28, 5, 2]],
+  [["MOVE"],                 [L],       [AnDisp, AnDispIx],      [30, 5, 2]],
+  [["MOVE"],                 [L],       [AnDisp, AbsW],          [28, 5, 2]],
+  [["MOVE"],                 [L],       [AnDisp, AbsL],          [32, 6, 2]],
+  [["MOVE"],                 [L],       [AnDispIx, Dn],          [18, 4, 0]],
+  [["MOVE"],                 [L],       [AnDispIx, An],          [18, 4, 0]],
+  [["MOVE"],                 [L],       [AnDispIx, AnIndir],     [26, 4, 2]],
+  [["MOVE"],                 [L],       [AnDispIx, AnPostInc],   [26, 4, 2]],
+  [["MOVE"],                 [L],       [AnDispIx, AnPreDec],    [26, 4, 2]],
+  [["MOVE"],                 [L],       [AnDispIx, AnDisp],      [30, 5, 2]],
+  [["MOVE"],                 [L],       [AnDispIx, AnDispIx],    [32, 5, 2]],
+  [["MOVE"],                 [L],       [AnDispIx, AbsW],        [30, 5, 2]],
+  [["MOVE"],                 [L],       [AnDispIx, AbsL],        [34, 6, 2]],
+  [["MOVE"],                 [L],       [AbsW, Dn],              [16, 4, 0]],
+  [["MOVE"],                 [L],       [AbsW, An],              [16, 4, 0]],
+  [["MOVE"],                 [L],       [AbsW, AnIndir],         [24, 4, 2]],
+  [["MOVE"],                 [L],       [AbsW, AnPostInc],       [24, 4, 2]],
+  [["MOVE"],                 [L],       [AbsW, AnPreDec],        [24, 4, 2]],
+  [["MOVE"],                 [L],       [AbsW, AnDisp],          [28, 5, 2]],
+  [["MOVE"],                 [L],       [AbsW, AnDispIx],        [30, 5, 2]],
+  [["MOVE"],                 [L],       [AbsW, AbsW],            [28, 5, 2]],
+  [["MOVE"],                 [L],       [AbsW, AbsL],            [32, 6, 2]],
+  [["MOVE"],                 [L],       [AbsL, Dn],              [20, 5, 0]],
+  [["MOVE"],                 [L],       [AbsL, An],              [20, 5, 0]],
+  [["MOVE"],                 [L],       [AbsL, AnIndir],         [28, 5, 2]],
+  [["MOVE"],                 [L],       [AbsL, AnPostInc],       [28, 5, 2]],
+  [["MOVE"],                 [L],       [AbsL, AnPreDec],        [28, 5, 2]],
+  [["MOVE"],                 [L],       [AbsL, AnDisp],          [32, 6, 2]],
+  [["MOVE"],                 [L],       [AbsL, AnDispIx],        [34, 6, 2]],
+  [["MOVE"],                 [L],       [AbsL, AbsW],            [32, 6, 2]],
+  [["MOVE"],                 [L],       [AbsL, AbsL],            [36, 7, 2]],
+  [["MOVE"],                 [L],       [PcDisp, Dn],            [16, 4, 0]],
+  [["MOVE"],                 [L],       [PcDisp, An],            [16, 4, 0]],
+  [["MOVE"],                 [L],       [PcDisp, AnIndir],       [24, 4, 2]],
+  [["MOVE"],                 [L],       [PcDisp, AnPostInc],     [24, 4, 2]],
+  [["MOVE"],                 [L],       [PcDisp, AnPreDec],      [24, 4, 2]],
+  [["MOVE"],                 [L],       [PcDisp, AnDisp],        [28, 5, 2]],
+  [["MOVE"],                 [L],       [PcDisp, AnDispIx],      [30, 5, 2]],
+  [["MOVE"],                 [L],       [PcDisp, AbsW],          [28, 5, 2]],
+  [["MOVE"],                 [L],       [PcDisp, AbsL],          [32, 5, 2]],
+  [["MOVE"],                 [L],       [PcDispIx, Dn],          [18, 4, 0]],
+  [["MOVE"],                 [L],       [PcDispIx, An],          [18, 4, 0]],
+  [["MOVE"],                 [L],       [PcDispIx, AnIndir],     [26, 4, 2]],
+  [["MOVE"],                 [L],       [PcDispIx, AnPostInc],   [26, 4, 2]],
+  [["MOVE"],                 [L],       [PcDispIx, AnPreDec],    [26, 4, 2]],
+  [["MOVE"],                 [L],       [PcDispIx, AnDisp],      [30, 5, 2]],
+  [["MOVE"],                 [L],       [PcDispIx, AnDispIx],    [32, 5, 2]],
+  [["MOVE"],                 [L],       [PcDispIx, AbsW],        [30, 5, 2]],
+  [["MOVE"],                 [L],       [PcDispIx, AbsL],        [34, 6, 2]],
+  [["MOVE"],                 [L],       [Imm, Dn],               [12, 3, 0]],
+  [["MOVE"],                 [L],       [Imm, An],               [12, 3, 0]],
+  [["MOVE"],                 [L],       [Imm, AnIndir],          [20, 3, 2]],
+  [["MOVE"],                 [L],       [Imm, AnPostInc],        [20, 3, 2]],
+  [["MOVE"],                 [L],       [Imm, AnPreDec],         [20, 3, 2]],
+  [["MOVE"],                 [L],       [Imm, AnDisp],           [24, 4, 2]],
+  [["MOVE"],                 [L],       [Imm, AnDispIx],         [26, 4, 2]],
+  [["MOVE"],                 [L],       [Imm, AbsW],             [24, 4, 2]],
+  [["MOVE"],                 [L],       [Imm, AbsL],             [28, 5, 2]],
 
-const sourceEa = (
-  base: Timing,
-  dest: OperandType,
-  size: EaSize = WB
-): TimingMap =>
-  Object.keys(eaAll).reduce((acc, k) => {
-    acc[k + "," + dest] = addTimings(eaAll[k][size], base);
-    return acc;
-  }, {} as TimingMap);
+  [["ADD", "SUB"],           [B, W],    [EA, An],                [8, 1, 0]],
+  [["ADD", "SUB"],           [B, W],    [EA, Dn],                [4, 1, 0]],
+  [["ADD", "SUB"],           [B, W],    [Dn, M],                 [8, 1, 1]],
+  [["ADD", "SUB"],           [B, W],    [Imm, Dn],               [8, 2, 1]],
+  [["ADD", "SUB"],           [B, W],    [Imm, M],                [8, 1, 1]],
 
-const sourceMem = (base: Timing, dest: OperandType, size: EaSize = WB) =>
-  Object.keys(eaMem).reduce((acc, k) => {
-    acc[k + "," + dest] = addTimings(eaMem[k][size], base);
-    return acc;
-  }, {} as TimingMap);
+  [["ADD", "SUB"],           [L],       [M, An],                 [6, 1, 0]],
+  [["ADD", "SUB"],           [L],       [M, Dn],                 [6, 1, 0]],
+  [["ADD", "SUB"],           [L],       [DI, An],                [8, 1, 0]],
+  [["ADD", "SUB"],           [L],       [DI, Dn],                [8, 1, 0]],
+  [["ADD", "SUB"],           [L],       [Dn, M],                 [12, 1, 2]],
+  [["ADD", "SUB"],           [L],       [Imm, Dn],               [16, 3, 0]],
+  [["ADD", "SUB"],           [L],       [Imm, M],                [20, 3, 2]],
 
-const sourceDirectImmediate = (
-  base: Timing,
-  dest: OperandType,
-  size: EaSize = WB
-) =>
-  Object.keys(eaDirectImmediate).reduce((acc, k) => {
-    acc[k + "," + dest] = addTimings(eaDirectImmediate[k][size], base);
-    return acc;
-  }, {} as TimingMap);
+  [["AND", "OR"],            [B, W],    [EA, Dn],                [4, 1, 0]],
+  [["AND", "OR"],            [B, W],    [Dn, M],                 [8, 1, 1]],
+  [["AND", "OR"],            [B, W],    [Imm, Dn],               [8, 2, 0]],
+  [["AND", "OR"],            [B, W],    [Imm, M],                [12, 2, 1]],
 
-const destMem = (base: Timing, source: OperandType, size: EaSize = WB) =>
-  Object.keys(eaMem).reduce((acc, k) => {
-    acc[source + "," + k] = addTimings(eaMem[k][size], base);
-    return acc;
-  }, {} as TimingMap);
+  [["AND", "OR"],            [L],       [M, Dn],                 [6, 1, 0]],
+  [["AND", "OR"],            [L],       [DI, Dn],                [8, 1, 0]],
+  [["AND", "OR"],            [L],       [Dn, M],                 [12, 1, 2]],
+  [["AND", "OR"],            [L],       [Imm, Dn],               [16, 3, 0]],
+  [["AND"],                  [L],       [Imm, M],                [20, 3, 1]],
+  [["OR"],                   [L],       [Imm, M],                [20, 3, 2]],
 
-// Build maps for each mnemonic / size:
+  [["EOR"],                  [B, W],    [Dn, Dn],                [4, 1, 0]],
+  [["EOR"],                  [B, W],    [Dn, M],                 [8, 1, 1]],
+  [["EOR"],                  [B, W],    [Imm, Dn],               [8, 2, 0]],
+  [["EOR"],                  [B, W],    [Imm, M],                [12, 1, 0]],
 
-const moveBW: TimingMap = {
-  "Dn,Dn": timing(4, 1, 0),
-  "Dn,An": timing(4, 1, 0),
-  "Dn,(An)": timing(8, 1, 1),
-  "Dn,(An)+": timing(8, 1, 1),
-  "Dn,-(An)": timing(8, 1, 1),
-  "Dn,d(An)": timing(12, 2, 1),
-  "Dn,d(An,ix)": timing(14, 2, 1),
-  "Dn,xxx.W": timing(12, 2, 1),
-  "Dn,xxx.L": timing(16, 3, 1),
-  "An,Dn": timing(4, 1, 0),
-  "An,An": timing(4, 1, 0),
-  "An,(An)": timing(8, 1, 1),
-  "An,(An)+": timing(8, 1, 1),
-  "An,-(An)": timing(8, 1, 1),
-  "An,d(An)": timing(12, 2, 1),
-  "An,d(An,ix)": timing(14, 2, 1),
-  "An,xxx.W": timing(12, 2, 1),
-  "An,xxx.L": timing(16, 3, 1),
-  "(An),Dn": timing(8, 2, 0),
-  "(An),An": timing(8, 2, 0),
-  "(An),(An)": timing(12, 2, 1),
-  "(An),(An)+": timing(12, 2, 1),
-  "(An),-(An)": timing(12, 2, 1),
-  "(An),d(An)": timing(16, 3, 1),
-  "(An),d(An,ix)": timing(18, 3, 1),
-  "(An),xxx.W": timing(16, 3, 1),
-  "(An),xxx.L": timing(20, 4, 1),
-  "(An)+,Dn": timing(8, 2, 0),
-  "(An)+,An": timing(8, 2, 0),
-  "(An)+,(An)": timing(12, 2, 1),
-  "(An)+,(An)+": timing(12, 2, 1),
-  "(An)+,-(An)": timing(12, 2, 1),
-  "(An)+,d(An)": timing(16, 3, 1),
-  "(An)+,d(An,ix)": timing(18, 3, 1),
-  "(An)+,xxx.W": timing(16, 3, 1),
-  "(An)+,xxx.L": timing(20, 4, 1),
-  "-(An),Dn": timing(10, 2, 0),
-  "-(An),An": timing(10, 2, 0),
-  "-(An),(An)": timing(14, 2, 1),
-  "-(An),(An)+": timing(14, 2, 1),
-  "-(An),-(An)": timing(14, 2, 1),
-  "-(An),d(An)": timing(18, 3, 1),
-  "-(An),d(An,ix)": timing(20, 4, 1),
-  "-(An),xxx.W": timing(18, 3, 1),
-  "-(An),xxx.L": timing(22, 4, 1),
-  "d(An),Dn": timing(12, 3, 0),
-  "d(An),An": timing(12, 3, 0),
-  "d(An),(An)": timing(16, 3, 1),
-  "d(An),(An)+": timing(16, 3, 1),
-  "d(An),-(An)": timing(16, 3, 1),
-  "d(An),d(An)": timing(20, 4, 1),
-  "d(An),d(An,ix)": timing(22, 4, 1),
-  "d(An),xxx.W": timing(20, 4, 1),
-  "d(An),xxx.L": timing(24, 5, 1),
-  "d(An,ix),Dn": timing(14, 3, 0),
-  "d(An,ix),An": timing(14, 3, 0),
-  "d(An,ix),(An)": timing(18, 3, 1),
-  "d(An,ix),(An)+": timing(18, 3, 1),
-  "d(An,ix),-(An)": timing(18, 3, 1),
-  "d(An,ix),d(An)": timing(22, 4, 1),
-  "d(An,ix),d(An,ix)": timing(24, 4, 1),
-  "d(An,ix),xxx.W": timing(22, 4, 1),
-  "d(An,ix),xxx.L": timing(26, 5, 1),
-  "xxx.W,Dn": timing(12, 3, 0),
-  "xxx.W,An": timing(12, 3, 0),
-  "xxx.W,(An)": timing(16, 3, 1),
-  "xxx.W,(An)+": timing(16, 3, 1),
-  "xxx.W,-(An)": timing(16, 3, 1),
-  "xxx.W,d(An)": timing(20, 4, 1),
-  "xxx.W,d(An,ix)": timing(22, 4, 1),
-  "xxx.W,xxx.W": timing(20, 4, 1),
-  "xxx.W,xxx.L": timing(24, 5, 1),
-  "xxx.L,Dn": timing(16, 4, 0),
-  "xxx.L,An": timing(16, 4, 0),
-  "xxx.L,(An)": timing(20, 4, 1),
-  "xxx.L,(An)+": timing(20, 4, 1),
-  "xxx.L,-(An)": timing(20, 4, 1),
-  "xxx.L,d(An)": timing(24, 5, 1),
-  "xxx.L,d(An,ix)": timing(26, 5, 1),
-  "xxx.L,xxx.W": timing(24, 5, 1),
-  "xxx.L,xxx.L": timing(28, 6, 1),
-  "d(PC),Dn": timing(12, 3, 0),
-  "d(PC),An": timing(12, 3, 0),
-  "d(PC),(An)": timing(16, 3, 1),
-  "d(PC),(An)+": timing(16, 3, 1),
-  "d(PC),-(An)": timing(16, 3, 1),
-  "d(PC),d(An)": timing(20, 4, 1),
-  "d(PC),d(An,ix)": timing(22, 4, 1),
-  "d(PC),xxx.W": timing(20, 4, 1),
-  "d(PC),xxx.L": timing(24, 5, 1),
-  "d(PC,ix),Dn": timing(14, 3, 0),
-  "d(PC,ix),An": timing(14, 3, 0),
-  "d(PC,ix),(An)": timing(18, 3, 1),
-  "d(PC,ix),(An)+": timing(18, 3, 1),
-  "d(PC,ix),-(An)": timing(18, 3, 1),
-  "d(PC,ix),d(An)": timing(22, 4, 1),
-  "d(PC,ix),d(An,ix)": timing(24, 4, 1),
-  "d(PC,ix),xxx.W": timing(22, 4, 1),
-  "d(PC,ix),xxx.L": timing(26, 5, 1),
-  "#xxx,Dn": timing(8, 2, 0),
-  "#xxx,An": timing(8, 2, 0),
-  "#xxx,(An)": timing(12, 2, 1),
-  "#xxx,(An)+": timing(12, 2, 1),
-  "#xxx,-(An)": timing(12, 2, 1),
-  "#xxx,d(An)": timing(16, 3, 1),
-  "#xxx,d(An,ix)": timing(18, 3, 1),
-  "#xxx,xxx.W": timing(16, 3, 1),
-  "#xxx,xxx.L": timing(20, 4, 1),
-};
-const moveL: TimingMap = {
-  "Dn,Dn": timing(4, 1, 0),
-  "Dn,An": timing(4, 1, 0),
-  "Dn,(An)": timing(12, 1, 2),
-  "Dn,(An)+": timing(12, 1, 2),
-  "Dn,-(An)": timing(12, 1, 2),
-  "Dn,d(An)": timing(16, 2, 2),
-  "Dn,d(An,ix)": timing(18, 2, 2),
-  "Dn,xxx.W": timing(16, 2, 2),
-  "Dn,xxx.L": timing(20, 3, 2),
-  "An,Dn": timing(4, 1, 0),
-  "An,An": timing(4, 1, 0),
-  "An,(An)": timing(12, 1, 2),
-  "An,(An)+": timing(12, 1, 2),
-  "An,-(An)": timing(12, 1, 2),
-  "An,d(An)": timing(16, 2, 2),
-  "An,d(An,ix)": timing(18, 2, 2),
-  "An,xxx.W": timing(16, 2, 2),
-  "An,xxx.L": timing(20, 3, 2),
-  "(An),Dn": timing(12, 3, 0),
-  "(An),An": timing(12, 3, 0),
-  "(An),(An)": timing(20, 3, 2),
-  "(An),(An)+": timing(20, 3, 2),
-  "(An),-(An)": timing(20, 3, 2),
-  "(An),d(An)": timing(24, 4, 2),
-  "(An),d(An,ix)": timing(26, 4, 2),
-  "(An),xxx.W": timing(24, 4, 2),
-  "(An),xxx.L": timing(28, 5, 2),
-  "(An)+,Dn": timing(12, 3, 0),
-  "(An)+,An": timing(12, 3, 0),
-  "(An)+,(An)": timing(20, 3, 2),
-  "(An)+,(An)+": timing(20, 3, 2),
-  "(An)+,-(An)": timing(20, 3, 2),
-  "(An)+,d(An)": timing(24, 4, 2),
-  "(An)+,d(An,ix)": timing(26, 4, 2),
-  "(An)+,xxx.W": timing(24, 4, 2),
-  "(An)+,xxx.L": timing(28, 5, 2),
-  "-(An),Dn": timing(14, 3, 0),
-  "-(An),An": timing(14, 3, 0),
-  "-(An),(An)": timing(22, 3, 2),
-  "-(An),(An)+": timing(22, 3, 2),
-  "-(An),-(An)": timing(22, 3, 2),
-  "-(An),d(An)": timing(26, 4, 2),
-  "-(An),d(An,ix)": timing(28, 4, 2),
-  "-(An),xxx.W": timing(26, 4, 2),
-  "-(An),xxx.L": timing(30, 5, 2),
-  "d(An),Dn": timing(16, 4, 0),
-  "d(An),An": timing(16, 4, 0),
-  "d(An),(An)": timing(24, 4, 2),
-  "d(An),(An)+": timing(24, 4, 2),
-  "d(An),-(An)": timing(24, 4, 2),
-  "d(An),d(An)": timing(28, 5, 2),
-  "d(An),d(An,ix)": timing(30, 5, 2),
-  "d(An),xxx.W": timing(28, 5, 2),
-  "d(An),xxx.L": timing(32, 6, 2),
-  "d(An,ix),Dn": timing(18, 4, 0),
-  "d(An,ix),An": timing(18, 4, 0),
-  "d(An,ix),(An)": timing(26, 4, 2),
-  "d(An,ix),(An)+": timing(26, 4, 2),
-  "d(An,ix),-(An)": timing(26, 4, 2),
-  "d(An,ix),d(An)": timing(30, 5, 2),
-  "d(An,ix),d(An,ix)": timing(32, 5, 2),
-  "d(An,ix),xxx.W": timing(30, 5, 2),
-  "d(An,ix),xxx.L": timing(34, 6, 2),
-  "xxx.W,Dn": timing(16, 4, 0),
-  "xxx.W,An": timing(16, 4, 0),
-  "xxx.W,(An)": timing(24, 4, 2),
-  "xxx.W,(An)+": timing(24, 4, 2),
-  "xxx.W,-(An)": timing(24, 4, 2),
-  "xxx.W,d(An)": timing(28, 5, 2),
-  "xxx.W,d(An,ix)": timing(30, 5, 2),
-  "xxx.W,xxx.W": timing(28, 5, 2),
-  "xxx.W,xxx.L": timing(32, 6, 2),
-  "xxx.L,Dn": timing(20, 5, 0),
-  "xxx.L,An": timing(20, 5, 0),
-  "xxx.L,(An)": timing(28, 5, 2),
-  "xxx.L,(An)+": timing(28, 5, 2),
-  "xxx.L,-(An)": timing(28, 5, 2),
-  "xxx.L,d(An)": timing(32, 6, 2),
-  "xxx.L,d(An,ix)": timing(34, 6, 2),
-  "xxx.L,xxx.W": timing(32, 6, 2),
-  "xxx.L,xxx.L": timing(36, 7, 2),
-  "d(PC),Dn": timing(16, 4, 0),
-  "d(PC),An": timing(16, 4, 0),
-  "d(PC),(An)": timing(24, 4, 2),
-  "d(PC),(An)+": timing(24, 4, 2),
-  "d(PC),-(An)": timing(24, 4, 2),
-  "d(PC),d(An)": timing(28, 5, 2),
-  "d(PC),d(An,ix)": timing(30, 5, 2),
-  "d(PC),xxx.W": timing(28, 5, 2),
-  "d(PC),xxx.L": timing(32, 5, 2),
-  "d(PC,ix),Dn": timing(18, 4, 0),
-  "d(PC,ix),An": timing(18, 4, 0),
-  "d(PC,ix),(An)": timing(26, 4, 2),
-  "d(PC,ix),(An)+": timing(26, 4, 2),
-  "d(PC,ix),-(An)": timing(26, 4, 2),
-  "d(PC,ix),d(An)": timing(30, 5, 2),
-  "d(PC,ix),d(An,ix)": timing(32, 5, 2),
-  "d(PC,ix),xxx.W": timing(30, 5, 2),
-  "d(PC,ix),xxx.L": timing(34, 6, 2),
-  "#xxx,Dn": timing(12, 3, 0),
-  "#xxx,An": timing(12, 3, 0),
-  "#xxx,(An)": timing(20, 3, 2),
-  "#xxx,(An)+": timing(20, 3, 2),
-  "#xxx,-(An)": timing(20, 3, 2),
-  "#xxx,d(An)": timing(24, 4, 2),
-  "#xxx,d(An,ix)": timing(26, 4, 2),
-  "#xxx,xxx.W": timing(24, 4, 2),
-  "#xxx,xxx.L": timing(28, 5, 2),
-};
+  [["EOR"],                  [L],       [Dn, Dn],                [8, 1, 0]],
+  [["EOR"],                  [L],       [Dn, M],                 [12, 1, 2]],
+  [["EOR"],                  [L],       [Imm, Dn],               [16, 3, 0]],
+  [["EOR"],                  [L],       [Imm, M],                [20, 3, 2]],
 
-const addSubBW: TimingMap = {
-  ...sourceEa(timing(8, 1, 0), An),
-  ...sourceEa(timing(4, 1, 0), Dn),
-  ...destMem(timing(8, 1, 1), Dn),
-  "#xxx,Dn": timing(8, 2, 0),
-  ...destMem(timing(12, 2, 1), Imm),
-};
-const addSubL: TimingMap = {
-  ...sourceMem(timing(6, 1, 0), An, L),
-  ...sourceMem(timing(6, 1, 0), Dn, L),
-  ...sourceDirectImmediate(timing(8, 1, 0), An, L),
-  ...sourceDirectImmediate(timing(8, 1, 0), Dn, L),
-  ...destMem(timing(12, 1, 2), Dn, L),
-  "#xxx,Dn": timing(16, 3, 0),
-  ...destMem(timing(20, 3, 2), Imm, L),
-};
+  [["CMP"],                  [B, W],    [EA, An],                [6, 1, 0]],
+  [["CMP"],                  [B, W],    [EA, Dn],                [4, 1, 0]],
+  [["CMP"],                  [B, W],    [Imm, Dn],               [8, 2, 0]],
+  [["CMP"],                  [B, W],    [Imm, M],                [8, 2, 0]],
 
-const andOrBW: TimingMap = {
-  ...sourceEa(timing(4, 1, 0), Dn),
-  ...destMem(timing(8, 1, 1), Dn),
-  "#xxx,Dn": timing(8, 2, 0),
-  ...destMem(timing(12, 2, 1), Imm),
-};
-const andL: TimingMap = {
-  ...sourceMem(timing(6, 1, 0), Dn, L),
-  ...sourceDirectImmediate(timing(8, 1, 0), Dn, L),
-  ...destMem(timing(12, 1, 2), Dn, L),
-  "#xxx,Dn": timing(16, 3, 0),
-  ...destMem(timing(20, 3, 1), Imm, L),
-};
-const orL: TimingMap = {
-  ...sourceMem(timing(6, 1, 0), Dn, L),
-  ...sourceDirectImmediate(timing(8, 1, 0), Dn, L),
-  ...destMem(timing(12, 1, 2), Dn, L),
-  "#xxx,Dn": timing(16, 3, 0),
-  ...destMem(timing(20, 3, 2), Imm, L),
-};
+  [["CMP"],                  [L],       [EA, An],                [6, 1, 0]],
+  [["CMP"],                  [L],       [EA, Dn],                [6, 1, 0]],
+  [["CMP"],                  [L],       [Imm, Dn],               [14, 3, 0]],
+  [["CMP"],                  [L],       [Imm, M],                [12, 3, 0]],
 
-const eorBW: TimingMap = {
-  Dn: timing(4, 1, 0),
-  ...destMem(timing(8, 1, 1), Dn),
-  "#xxx,Dn": timing(8, 2, 0),
-  ...destMem(timing(12, 1, 0), Imm),
-};
-const eorL: TimingMap = {
-  Dn: timing(8, 1, 0),
-  ...destMem(timing(12, 1, 2), Dn),
-  "#xxx,Dn": timing(16, 3, 0),
-  ...destMem(timing(20, 3, 2), Imm, L),
-};
+  [["DIVS"],                 [W],       [EA, Dn],                [158, 1, 0]],
+  [["DIVU"],                 [W],       [EA, Dn],                [140, 1, 0]],
+  [["MULS", "MULU"],         [W],       [EA, Dn],                [70, 1, 0]],
 
-const cmpBW: TimingMap = {
-  ...sourceEa(timing(6, 1, 0), An),
-  ...sourceEa(timing(4, 1, 0), Dn),
-  "#xxx,Dn": timing(8, 2, 0),
-  ...destMem(timing(8, 2, 0), Imm),
-};
-const cmpL: TimingMap = {
-  ...sourceEa(timing(6, 1, 0), An, L),
-  ...sourceEa(timing(6, 1, 0), Dn, L),
-  "#xxx,Dn": timing(14, 3, 0),
-  ...destMem(timing(12, 3, 0), Imm, L),
-};
+  [["ADDQ", "SUBQ"],         [B, W],    [Imm, Dn],               [4, 1, 0]],
+  [["ADDQ", "SUBQ"],         [B, W],    [Imm, An],               [8, 1, 0]],
+  [["ADDQ", "SUBQ"],         [B, W],    [Imm, M],                [8, 1, 0]],
 
-const divs = sourceEa(timing(158, 1, 0), Dn);
-const divu = sourceEa(timing(140, 1, 0), Dn);
-const muls = sourceEa(timing(70, 1, 0), Dn);
-const mulu = sourceEa(timing(70, 1, 0), Dn);
+  [["ADDQ", "SUBQ"],         [L],       [Imm, Dn],               [8, 1, 0]],
+  [["ADDQ", "SUBQ"],         [L],       [Imm, An],               [8, 1, 0]],
+  [["ADDQ", "SUBQ"],         [L],       [Imm, M],                [12, 1, 2]],
 
-const addqSubqBW: TimingMap = {
-  "#xxx,Dn": timing(4, 1, 0),
-  "#xxx,An": timing(8, 1, 0),
-  ...destMem(timing(8, 1, 1), Imm),
-};
-const addqSubqL: TimingMap = {
-  "#xxx,Dn": timing(8, 1, 0),
-  "#xxx,An": timing(8, 1, 0),
-  ...destMem(timing(12, 1, 2), Imm, L),
-};
+  [["MOVEQ"],                [L],       [Imm, Dn],               [4, 1, 0]],
 
-const moveq: TimingMap = {
-  "#xxx,Dn": timing(4, 1, 0),
-};
+  [["CLR", "NOT", "NEG"],    [B, W],    [Dn],                    [4, 1, 0]],
+  [["CLR", "NOT", "NEG"],    [B, W],    [M],                     [8, 1, 1]],
+  [["CLR", "NOT", "NEG"],    [L],       [Dn],                    [6, 1, 0]],
+  [["CLR", "NOT", "NEG"],    [L],       [M],                     [12, 1, 2]],
 
-const clrBW: TimingMap = {
-  Dn: timing(4, 1, 0),
-  ...unaryMem(timing(8, 1, 1)),
-};
-const clrL: TimingMap = {
-  Dn: timing(6, 1, 0),
-  ...unaryMem(timing(12, 1, 2), L),
-};
+  [["NBCD"],                 [B],       [Dn],                    [6, 1, 0]],
+  [["NBCD"],                 [B],       [M],                     [8, 1, 0]],
 
-const nbcd: TimingMap = {
-  Dn: timing(6, 1, 0),
-  ...unaryMem(timing(8, 1, 1)),
-};
+  [["NEGX"],                 [B, W],    [Dn],                    [4, 1, 0]],
+  [["NEGX"],                 [B, W],    [M],                     [8, 1, 1]],
+  [["NEGX"],                 [L],       [Dn],                    [6, 1, 0]],
+  [["NEGX"],                 [L],       [M],                     [12, 1, 2]],
 
-const negxBW: TimingMap = {
-  Dn: timing(4, 1, 0),
-  ...unaryMem(timing(8, 1, 1)),
-};
-const negxL: TimingMap = {
-  Dn: timing(6, 1, 0),
-  ...unaryMem(timing(12, 1, 2), L),
-};
+  [scc,                      [B],       [Dn],                    [[4, 1, 0], [6, 1, 0]]],
+  [scc,                      [B],       [M],                     [[8, 1, 1], [8, 1, 1]]],
 
-const scc: TimingMap = {
-  [Dn]: [timing(4, 1, 0), timing(6, 1, 0)], // false/true
-  ...unaryMem(timing(8, 1, 1)),
-};
+  [["TST"],                  [B, W, L], [Dn],                    [4, 1, 0]],
+  [["TST"],                  [B, W, L], [M],                     [4, 1, 0]],
 
-const tstBW: TimingMap = {
-  Dn: timing(4, 1, 0),
-  ...unaryMem(timing(4, 1, 0)),
-};
-const tstL: TimingMap = {
-  Dn: timing(4, 1, 0),
-  ...unaryMem(timing(4, 1, 0), L),
-};
+  [["TAS"],                  [B],       [Dn],                    [4, 1, 1]],
+  [["TAS"],                  [B],       [M],                     [10, 1, 1]],
 
-const tas: TimingMap = {
-  Dn: timing(4, 1, 0),
-  ...unaryMem(timing(10, 1, 1)),
-};
+  [shiftRot,                 [B, W],    [Imm, Dn],               [6, 1, 0, 2]],
+  [shiftRot,                 [B, W],    [Dn],                    [6, 1, 0]],
+  [shiftRot,                 [B, W],    [Dn, Dn],                [6, 1, 0]], // TODO: max for Dn source?
+  [shiftRot,                 [B, W],    [Imm, M],                [8, 1, 1, 2]],
+  [shiftRot,                 [B, W],    [M],                     [8, 1, 1]],
+  [shiftRot,                 [B, W],    [Dn, M],                 [8, 1, 1]], // TODO: max for Dn source?
+  [shiftRot,                 [L],       [Imm, Dn],               [8, 1, 0, 2]],
+  [shiftRot,                 [L],       [Dn],                    [8, 1, 0]],
+  [shiftRot,                 [L],       [Dn, Dn],                [8, 1, 0]], // TODO: max for Dn source?
 
-const shiftBW: TimingMap = {
-  "#xxx,Dn": timing(6, 1, 0, { nClock: 2 }),
-  ...destMem(timing(8, 1, 1), Imm),
-};
-const shiftL: TimingMap = {
-  "#xxx,Dn": timing(8, 1, 0, { nClock: 2 }),
-};
+  [["BCHG", "BSET", "BCLR"], [B],       [Dn, M],                 [8, 1, 1]],
+  [["BCHG", "BSET", "BCLR"], [B],       [Imm, M],                [12, 2, 1]],
+  [["BCHG", "BSET"],         [L],       [Dn, Dn],                [8, 1, 0]],
+  [["BCHG", "BSET"],         [L],       [Imm, Dn],               [12, 2, 0]],
+  [["BCLR"],                 [L],       [Dn, Dn],                [10, 1, 0]],
+  [["BCLR"],                 [L],       [Imm, Dn],               [14, 2, 0]],
 
-const bchgBsetB: TimingMap = {
-  ...destMem(timing(8, 1, 1), Dn),
-  ...destMem(timing(12, 2, 1), Imm),
-};
-const bchgBsetL: TimingMap = {
-  "Dn,Dn": timing(8, 1, 0),
-  "#xxx,Dn": timing(12, 2, 0),
-};
+  [["BTST"],                 [B],       [Dn, M],                 [4, 1, 0]],
+  [["BTST"],                 [B],       [Imm, M],                [8, 2, 0]],
+  [["BTST"],                 [L],       [Dn, Dn],                [6, 1, 0]],
+  [["BTST"],                 [L],       [Imm, Dn],               [10, 2, 0]],
 
-const bclrB: TimingMap = {
-  ...destMem(timing(8, 1, 1), Dn),
-  ...destMem(timing(12, 2, 1), Imm),
-};
-const bclrL: TimingMap = {
-  "Dn,Dn": timing(10, 1, 0),
-  "#xxx,Dn": timing(14, 2, 0),
-};
+  [["BRA"],                  [B, W],    [AbsL],                  [10, 2, 0]],
+  [["BSR"],                  [B, W],    [AbsL],                  [18, 2, 2]],
 
-const btstB: TimingMap = {
-  ...destMem(timing(4, 1, 0), Dn),
-  ...destMem(timing(8, 2, 0), Imm),
-};
-const btstL: TimingMap = {
-  "Dn,Dn": timing(6, 1, 0),
-  "#xxx,Dn": timing(10, 2, 0),
-};
+   [bcc,                     [B],       [AbsL],                  [[10, 2, 0], [8, 1, 0]]],
+   [bcc,                     [W],       [AbsL],                  [[10, 2, 0], [12, 1, 0]]],
 
-const bra: TimingMap = {
-  "xxx.L": timing(18, 2, 2),
-};
-const bsr: TimingMap = {
-  "xxx.L": timing(18, 2, 2),
-};
+   [dbcc,                    [W],       [Dn, AbsL],              [[10, 2, 0], [12, 2, 0],  [14, 3, 0]]],
 
-const bccB: TimingMap = {
-  "xxx.L": [timing(10, 2, 0), timing(8, 1, 0)], // Branch / continue
-};
-const bccW: TimingMap = {
-  "xxx.L": [timing(10, 2, 0), timing(12, 1, 0)], // Branch / continue
-};
-const dbcc: TimingMap = {
-  "Dn,xxx.L": [timing(10, 2, 0), timing(12, 2, 0), timing(14, 3, 0)], // Branch / Condition Met / Decremented To False
-};
+  [["JMP"],                  [NA],      [AnIndir],               [8, 2, 0]],
+  [["JMP"],                  [NA],      [AnDisp],                [10, 2, 0]],
+  [["JMP"],                  [NA],      [AnDispIx],              [14, 3, 0]],
+  [["JMP"],                  [NA],      [AbsW],                  [10, 2, 0]],
+  [["JMP"],                  [NA],      [AbsL],                  [12, 3, 0]],
+  [["JMP"],                  [NA],      [PcDisp],                [10, 2, 0]],
+  [["JMP"],                  [NA],      [PcDispIx],              [14, 3, 0]],
 
-const jmp: TimingMap = {
-  [AnIndir]: timing(8, 2, 0),
-  [AnDisp]: timing(10, 2, 0),
-  [AnDispIx]: timing(14, 3, 0),
-  [AbsW]: timing(10, 2, 0),
-  [AbsL]: timing(12, 3, 0),
-  [PcDisp]: timing(10, 2, 0),
-  [PcDispIx]: timing(14, 3, 0),
-};
+  [["JSR"],                  [NA],      [AnIndir],               [16, 2, 0]],
+  [["JSR"],                  [NA],      [AnDisp],                [18, 2, 0]],
+  [["JSR"],                  [NA],      [AnDispIx],              [22, 2, 2]],
+  [["JSR"],                  [NA],      [AbsW],                  [18, 2, 2]],
+  [["JSR"],                  [NA],      [AbsL],                  [20, 3, 2]],
+  [["JSR"],                  [NA],      [PcDisp],                [18, 2, 2]],
+  [["JSR"],                  [NA],      [PcDispIx],              [22, 2, 2]],
 
-const jsr: TimingMap = {
-  [AnIndir]: timing(16, 2, 0),
-  [AnDisp]: timing(18, 2, 0),
-  [AnDispIx]: timing(22, 2, 2),
-  [AbsW]: timing(18, 2, 2),
-  [AbsL]: timing(20, 3, 2),
-  [PcDisp]: timing(18, 2, 2),
-  [PcDispIx]: timing(22, 2, 2),
-};
+  [["LEA"],                  [L],       [AnIndir, An],           [4, 1, 0]],
+  [["LEA"],                  [L],       [AnDisp, An],            [8, 2, 0]],
+  [["LEA"],                  [L],       [AnDispIx, An],          [12, 2, 0]],
+  [["LEA"],                  [L],       [AbsW, An],              [8, 2, 0]],
+  [["LEA"],                  [L],       [AbsL, An],              [12, 3, 0]],
+  [["LEA"],                  [L],       [PcDisp, An],            [8, 2, 0]],
+  [["LEA"],                  [L],       [PcDispIx, An],          [12, 2, 0]],
 
-const lea: TimingMap = {
-  "(An),An": timing(4, 1, 0),
-  "d(An),An": timing(8, 2, 0),
-  "d(An,ix),An": timing(12, 2, 0),
-  "xxx.W,An": timing(8, 2, 0),
-  "xxx.L,An": timing(12, 3, 0),
-  "(d(PC),An)": timing(8, 2, 0),
-  "(d(PC,ix),An)": timing(12, 2, 0),
-};
+  [["PEA"],                  [L],       [AnIndir],               [12, 1, 2]],
+  [["PEA"],                  [L],       [AnDisp],                [16, 2, 2]],
+  [["PEA"],                  [L],       [AnDispIx],              [20, 2, 2]],
+  [["PEA"],                  [L],       [AbsW],                  [16, 2, 2]],
+  [["PEA"],                  [L],       [AbsL],                  [20, 3, 2]],
+  [["PEA"],                  [L],       [PcDisp],                [16, 2, 2]],
+  [["PEA"],                  [L],       [PcDispIx],              [20, 2, 2]],
 
-const pea: TimingMap = {
-  [AnIndir]: timing(12, 1, 2),
-  [AnDisp]: timing(16, 2, 2),
-  [AnDispIx]: timing(20, 2, 2),
-  [AbsW]: timing(16, 2, 2),
-  [AbsL]: timing(20, 3, 2),
-  [PcDisp]: timing(16, 2, 2),
-  [PcDispIx]: timing(20, 2, 2),
-};
+  [["ADDX", "SUBX"],         [B, W],    [Dn, Dn],                [4, 1, 0]],
+  [["ADDX", "SUBX"],         [B, W],    [AnPreDec, AnPreDec],    [18, 3, 0]],
+  [["ADDX", "SUBX"],         [L],       [Dn, Dn],                [8, 1, 0]],
+  [["ADDX", "SUBX"],         [L],       [AnPreDec, AnPreDec],    [30, 5, 2]],
 
-const addxSubxBw: TimingMap = {
-  "Dn,Dn": timing(4, 1, 0),
-  "-(An),-(An)": timing(18, 3, 0),
-};
-const addxSubxL: TimingMap = {
-  "Dn,Dn": timing(8, 1, 0),
-  "-(An),-(An)": timing(30, 5, 2),
-};
+  [["CMPM"],                 [B, W],    [AnPostInc, AnPostInc],  [12, 3, 0]],
+  [["CMPM"],                 [L],       [AnPostInc, AnPostInc],  [20, 5, 0]],
 
-const cmpmBw: TimingMap = {
-  "(An)+,(An)+": timing(12, 3, 0),
-};
-const cmpmL: TimingMap = {
-  "(An)+,(An)+": timing(20, 5, 0),
-};
+  [["ABCD", "SBCD"],         [B],       [Dn, Dn],                [6, 1, 0]],
+  [["ABCD", "SBCD"],         [B],       [AnPreDec, AnPreDec],    [18, 3, 1]],
 
-const xbcd: TimingMap = {
-  "Dn,Dn": timing(6, 1, 0),
-  "-(An),-(An)": timing(18, 3, 1),
-};
+  [["MOVEP"],                [W],       [Dn, AnDisp],            [16, 2, 2]],
+  [["MOVEP"],                [W],       [AnDisp, Dn],            [16, 4, 0]],
+  [["MOVEP"],                [L],       [Dn, AnDisp],            [24, 2, 4]],
+  [["MOVEP"],                [L],       [AnDisp, Dn],            [24, 6, 0]],
 
-const movepW: TimingMap = {
-  "Dn,d(An)": timing(16, 2, 2),
-  "d(An),Dn": timing(16, 4, 0),
-};
-const movepL: TimingMap = {
-  "Dn,d(An)": timing(24, 2, 4),
-  "d(An),Dn": timing(24, 6, 0),
-};
+  [["MOVEM"],                [W],       [RegList, AnIndir],      [8, 2, 0, 4, 0, 1]],
+  [["MOVEM"],                [W],       [RegList, AnPreDec],     [8, 2, 0, 4, 0, 1]],
+  [["MOVEM"],                [W],       [RegList, AnDisp],       [12, 3, 0, 4, 0, 1]],
+  [["MOVEM"],                [W],       [RegList, AnDispIx],     [14, 3, 0, 4, 0, 1]],
+  [["MOVEM"],                [W],       [RegList, AbsW],         [12, 3, 0, 4, 0, 1]],
+  [["MOVEM"],                [W],       [RegList, AbsL],         [16, 4, 0, 4, 0, 1]],
 
-/*
-TODO:
-ANDI to CCR	byte	 20(3/0)	   -
-ANDI to SR	word	 20(3/0)	   -
-EORI to CCR	byte	 20(3/0)	   -
-EORI to SR	word	 20(3/0)	   -
-ORI to CCR	byte	 20(3/0)	   -
-ORI to SR	word	 20(3/0)	   -
-MOVE from SR	 -	  6(1/0)	 8(1/1)+
-MOVE to CCR	 -	 12(1/0)	12(1/0)+
-MOVE to SR	 -	 12(1/0)	12(1/0)+
-*/
-const movemW: TimingMap = {
-  // R->M
-  "RegList,(An)": timing(8, 2, 0, { nClock: 4, nWrite: 1 }),
-  "RegList,-(An)": timing(8, 2, 0, { nClock: 4, nWrite: 1 }),
-  "RegList,d(An)": timing(12, 3, 0, { nClock: 4, nWrite: 1 }),
-  "RegList,d(An,ix)": timing(14, 3, 0, { nClock: 4, nWrite: 1 }),
-  "RegList,xxx.W": timing(12, 3, 0, { nClock: 4, nWrite: 1 }),
-  "RegList,xxx.L": timing(16, 4, 0, { nClock: 4, nWrite: 1 }),
-  // M->R
-  "(An),RegList": timing(12, 3, 0, { nClock: 4, nRead: 1 }),
-  "(An)+,RegList": timing(12, 3, 0, { nClock: 4, nRead: 1 }),
-  "d(An),RegList": timing(16, 4, 0, { nClock: 4, nRead: 1 }),
-  "d(An,ix),RegList": timing(18, 4, 0, { nClock: 4, nRead: 1 }),
-  "xxx.W,RegList": timing(16, 4, 0, { nClock: 4, nRead: 1 }),
-  "xxx.L,RegList": timing(20, 5, 0, { nClock: 4, nRead: 1 }),
-  "d(PC),RegList": timing(16, 4, 0, { nClock: 4, nRead: 1 }),
-  "d(PC,ix),RegList": timing(18, 4, 0, { nClock: 4, nRead: 1 }),
-};
-const movemL: TimingMap = {
-  // R->M
-  "RegList,(An)": timing(8, 2, 0, { nClock: 8, nWrite: 2 }),
-  "RegList,-(An)": timing(8, 2, 0, { nClock: 8, nWrite: 2 }),
-  "RegList,d(An)": timing(12, 3, 0, { nClock: 8, nWrite: 2 }),
-  "RegList,d(An,ix)": timing(14, 3, 0, { nClock: 8, nWrite: 2 }),
-  "RegList,xxx.W": timing(12, 3, 0, { nClock: 8, nWrite: 2 }),
-  "RegList,xxx.L": timing(16, 4, 0, { nClock: 8, nWrite: 2 }),
-  // M->R
-  "(An),RegList": timing(12, 3, 0, { nClock: 8, nRead: 2 }),
-  "(An)+,RegList": timing(12, 3, 0, { nClock: 8, nRead: 2 }),
-  "d(An),RegList": timing(16, 4, 0, { nClock: 8, nRead: 2 }),
-  "d(An,ix),RegList": timing(18, 4, 0, { nClock: 8, nRead: 2 }),
-  "xxx.W,RegList": timing(16, 4, 0, { nClock: 8, nRead: 2 }),
-  "xxx.L,RegList": timing(20, 5, 0, { nClock: 8, nRead: 2 }),
-  "d(PC),RegList": timing(16, 4, 0, { nClock: 8, nRead: 2 }),
-  "d(PC,ix),RegList": timing(18, 4, 0, { nClock: 8, nRead: 2 }),
-};
+  [["MOVEM"],                [W],       [AnIndir, RegList],      [12, 3, 0, 4, 1, 0]],
+  [["MOVEM"],                [W],       [AnPostInc, RegList],    [12, 3, 0, 4, 1, 0]],
+  [["MOVEM"],                [W],       [AnDisp, RegList],       [16, 4, 0, 4, 1, 0]],
+  [["MOVEM"],                [W],       [AnDispIx, RegList],     [18, 4, 0, 4, 1, 0]],
+  [["MOVEM"],                [W],       [AbsW, RegList],         [16, 4, 0, 4, 1, 0]],
+  [["MOVEM"],                [W],       [AbsL, RegList],         [20, 5, 0, 4, 1, 0]],
+  [["MOVEM"],                [W],       [PcDisp, RegList],       [16, 4, 0, 4, 1, 0]],
+  [["MOVEM"],                [W],       [PcDispIx, RegList],     [18, 4, 0, 4, 1, 0]],
 
-type SizeTimings = Partial<Record<Size, TimingMap>>;
-type InstructionTimings = Record<Mnemonic, SizeTimings>;
+  [["MOVEM"],                [L],       [RegList, AnIndir],      [8, 2, 0, 8, 0, 2]],
+  [["MOVEM"],                [L],       [RegList, AnPreDec],     [8, 2, 0, 8, 0, 2]],
+  [["MOVEM"],                [L],       [RegList, AnDisp],       [12, 3, 0, 8, 0, 2]],
+  [["MOVEM"],                [L],       [RegList, AnDispIx],     [14, 3, 0, 8, 0, 2]],
+  [["MOVEM"],                [L],       [RegList, AbsW],         [12, 3, 0, 8, 0, 2]],
+  [["MOVEM"],                [L],       [RegList, AbsL],         [16, 4, 0, 8, 0, 2]],
+
+  [["MOVEM"],                [L],       [AnIndir, RegList],      [12, 3, 0, 8, 2, 0]],
+  [["MOVEM"],                [L],       [AnPostInc, RegList],    [12, 3, 0, 8, 2, 0]],
+  [["MOVEM"],                [L],       [AnDisp, RegList],       [16, 4, 0, 8, 2, 0]],
+  [["MOVEM"],                [L],       [AnDispIx, RegList],     [18, 4, 0, 8, 2, 0]],
+  [["MOVEM"],                [L],       [AbsW, RegList],         [16, 4, 0, 8, 2, 0]],
+  [["MOVEM"],                [L],       [AbsL, RegList],         [20, 5, 0, 8, 2, 0]],
+  [["MOVEM"],                [L],       [PcDisp, RegList],       [16, 4, 0, 8, 2, 0]],
+  [["MOVEM"],                [L],       [PcDispIx, RegList],     [18, 4, 0, 8, 2, 0]],
+
+  [["CHK"],                  [B,W,L],   [Dn],                    [10, 1, 0]],
+  [["EXG"],                  [L],       [Dn,Dn],                 [6, 1, 0]],
+  [["EXG"],                  [L],       [Dn,An],                 [6, 1, 0]],
+  [["EXG"],                  [L],       [An,Dn],                 [6, 1, 0]],
+  [["EXG"],                  [L],       [An,An],                 [6, 1, 0]],
+  [["EXT"],                  [W, L],    [Dn],                    [4, 1, 0]],
+  [["LINK"],                 [NA],      [Dn],                    [16, 2, 2]],
+  [["NOP"],                  [NA],      [Dn],                    [4, 1, 0]],
+  [["RESET"],                [NA],      [],                      [40, 6, 0]],
+  [["RTE"],                  [NA],      [],                      [20, 5, 0]],
+  [["RTR"],                  [NA],      [],                      [20, 5, 0]],
+  [["RTS"],                  [NA],      [],                      [16, 4, 0]],
+  [["STOP"],                 [NA],      [Dn],                    [4, 0, 0]],
+  [["SWAP"],                 [W],       [Dn],                    [4, 1, 0]],
+  [["TRAP"],                 [NA],      [],                      [38, 4, 0]],
+  [["TRAPV"],                [NA],      [],                      [34, 4, 0]],
+  [["UNLK"],                 [NA],      [Dn],                    [12, 3, 0]],
+];
+
+// Flatten table into key/value for simple lookup by instruction string
+// e.g.
+// "MOVE.L Dn,Dn": [4, 1, 0]
+
+const timingMap: Record<string, TimeTuple | TimeTuple[]> = {};
+
+for (const row of tbl) {
+  const [mnemonics, sizes, operands, times] = row;
+  for (const mnemonic of mnemonics) {
+    for (const size of sizes) {
+      let key = mnemonic;
+      if (size !== NA) {
+        key += "." + size;
+      }
+      const eaSize = size === L ? 1 : 0;
+      let o: OperandType;
+
+      if (!operands.length) {
+        timingMap[key] = times;
+      } else if (isOperandGroup(operands[0])) {
+        for (o of operandGroups[operands[0]]) {
+          const eaTime = eaLookup[o][eaSize];
+          let k = key + " " + o;
+          if (operands[1]) {
+            k += "," + operands[1];
+          }
+          timingMap[k] = isMultiTime(times)
+            ? times.map((t) => addEa(t, eaTime))
+            : addEa(times, eaTime);
+        }
+      } else if (isOperandGroup(operands[1])) {
+        for (o of operandGroups[operands[1]]) {
+          const eaTime = eaLookup[o][eaSize];
+          timingMap[key + " " + operands[0] + "," + o] = isMultiTime(times)
+            ? times.map((t) => addEa(t, eaTime))
+            : addEa(times, eaTime);
+        }
+      } else {
+        timingMap[key + " " + operands.join(",")] = times;
+      }
+    }
+  }
+}
 
 /**
- * Table of TimingMaps for each mnemonic / size
+ * Typeguard to test for TimeTuple vs TimeTuple[]
  */
-const timings: InstructionTimings = {
-  ABCD: { B: xbcd },
-  ADD: { B: addSubBW, W: addSubBW, L: addSubL },
-  ADDQ: { B: addqSubqBW, W: addqSubqBW, L: addqSubqL },
-  ADDX: { B: addxSubxBw, W: addxSubxBw, L: addxSubxL },
-  AND: { B: andOrBW, W: andOrBW, L: andL },
-  ASL: { B: shiftBW, W: shiftBW, L: shiftL },
-  ASR: { B: shiftBW, W: shiftBW, L: shiftL },
-  BCC: { B: bccB, W: bccW },
-  BCHG: { B: bchgBsetB, L: bchgBsetL },
-  BCLR: { B: bclrB, L: bclrL },
-  BCS: { B: bccB, W: bccW },
-  BEQ: { B: bccB, W: bccW },
-  BGE: { B: bccB, W: bccW },
-  BGT: { B: bccB, W: bccW },
-  BHI: { B: bccB, W: bccW },
-  BLE: { B: bccB, W: bccW },
-  BLT: { B: bccB, W: bccW },
-  BMI: { B: bccB, W: bccW },
-  BNE: { B: bccB, W: bccW },
-  BPL: { B: bccB, W: bccW },
-  BRA: { B: bra, W: bra },
-  BSET: { B: bchgBsetB, L: bchgBsetL },
-  BSR: { B: bsr, W: bsr },
-  BTST: { B: btstB, L: btstL },
-  BVC: { B: bccB, W: bccW },
-  BVS: { B: bccB, W: bccW },
-  CHK: { NA: { Dn: timing(10, 1, 0) } },
-  CLR: { B: clrBW, W: clrBW, L: clrL },
-  CMP: { B: cmpBW, W: cmpBW, L: cmpL },
-  CMPM: { B: cmpmBw, W: cmpmBw, L: cmpmL },
-  DBCC: { W: dbcc },
-  DBCS: { W: dbcc },
-  DBEQ: { W: dbcc },
-  DBF: { W: dbcc },
-  DBGE: { W: dbcc },
-  DBGT: { W: dbcc },
-  DBHI: { W: dbcc },
-  DBLE: { W: dbcc },
-  DBLT: { W: dbcc },
-  DBMI: { W: dbcc },
-  DBNE: { W: dbcc },
-  DBPL: { W: dbcc },
-  DBT: { W: dbcc },
-  DBVC: { W: dbcc },
-  DBVS: { W: dbcc },
-  DIVS: { W: divs },
-  DIVU: { W: divu },
-  EOR: { B: eorBW, W: eorBW, L: eorL },
-  EXG: { NA: { Dn: timing(6, 1, 0) } },
-  EXT: { W: { Dn: timing(4, 1, 0) }, L: { Dn: timing(4, 1, 0) } },
-  JMP: { NA: jmp },
-  JSR: { NA: jsr },
-  LEA: { NA: lea },
-  LINK: { NA: { Dn: timing(16, 2, 2) } },
-  LSL: { B: shiftBW, W: shiftBW, L: shiftL },
-  LSR: { B: shiftBW, W: shiftBW, L: shiftL },
-  MOVE: { B: moveBW, W: moveBW, L: moveL },
-  MOVEM: { W: movemW, L: movemL },
-  MOVEP: { W: movepW, L: movepL },
-  MOVEQ: { L: moveq },
-  MULS: { W: muls },
-  MULU: { W: mulu },
-  NBCD: { B: nbcd },
-  NEG: { B: clrBW, W: clrBW, L: clrL },
-  NEGX: { B: negxBW, W: negxBW, L: negxL },
-  NOP: { NA: { Dn: timing(4, 1, 0) } },
-  NOT: { B: clrBW, W: clrBW, L: clrL },
-  OR: { B: andOrBW, W: andOrBW, L: orL },
-  PEA: { NA: pea },
-  RESET: { NA: { [NONE]: timing(40, 6, 0) } },
-  ROL: { B: shiftBW, W: shiftBW, L: shiftL },
-  ROR: { B: shiftBW, W: shiftBW, L: shiftL },
-  ROXL: { B: shiftBW, W: shiftBW, L: shiftL },
-  ROXR: { B: shiftBW, W: shiftBW, L: shiftL },
-  RTE: { NA: { [NONE]: timing(20, 5, 0) } },
-  RTR: { NA: { [NONE]: timing(20, 5, 0) } },
-  RTS: { NA: { [NONE]: timing(16, 4, 0) } },
-  SBCD: { B: xbcd },
-  SCC: { B: scc },
-  SCS: { B: scc },
-  SEQ: { B: scc },
-  SGE: { B: scc },
-  SGT: { B: scc },
-  SHI: { B: scc },
-  SLE: { B: scc },
-  SLT: { B: scc },
-  SMI: { B: scc },
-  SNE: { B: scc },
-  SPL: { B: scc },
-  STOP: { NA: { Dn: timing(4, 0, 0) } },
-  SUB: { B: addSubBW, W: addSubBW, L: addSubL },
-  SUBQ: { B: addqSubqBW, W: addqSubqBW, L: addqSubqL },
-  SUBX: { B: addxSubxBw, W: addxSubxBw, L: addxSubxL },
-  SVC: { B: scc },
-  SVS: { B: scc },
-  SWAP: { NA: { Dn: timing(4, 1, 0) } },
-  TAS: { B: tas },
-  TRAP: { NA: { [NONE]: timing(38, 4, 0) } },
-  TRAPV: { NA: { [NONE]: timing(34, 4, 0) } },
-  TST: { B: tstBW, W: tstBW, L: tstL },
-  UNLK: { NA: { Dn: timing(12, 3, 0) } },
-};
+function isMultiTime(times: TimeTuple | TimeTuple[]): times is TimeTuple[] {
+  return Array.isArray(times[0]);
+}
+
+/**
+ * Add effective address lookup to instruction time
+ *
+ * @param time Base instruction time
+ * @param eaTime EA lookup time
+ */
+function addEa(time: TimeTuple, eaTime: TimeTuple): TimeTuple {
+  const [cycles, read, write, ...rest] = time;
+  return [cycles + eaTime[0], read + eaTime[1], write + eaTime[2], ...rest];
+}
