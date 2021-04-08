@@ -17,6 +17,10 @@ Analyses 68000 assembly source to profile resource and size data. For each instr
   will parse simple expressions but doesn't currently substitute constants
   defined elsewhere.
 
+## Web app / demo
+
+You can try out the tool in a <a href="https://68kcounter-web.vercel.app/">web-based version</a>.
+
 ## CLI usage
 
 To analyse a source file run:
