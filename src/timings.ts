@@ -41,7 +41,7 @@ export function lookupTiming(
   }
 
   // Find value to use for n multipliers
-  const n: number = source?.value || dest?.value || 0;
+  const n: number = (source && source.value) || (dest && dest.value) || 0;
 
   // Convert tuple to structured timing object and apply n multipliers
   const toTiming = (t: TimeTuple): Timing => {
