@@ -1,6 +1,6 @@
 {
   "name": "68kcounter",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "68000 ASM source code cycle counter",
   "scripts": {
     "test": "jest",
