@@ -10,7 +10,7 @@ Analyses 68000 assembly source to profile resource and size data. For each instr
 ## Limitations:
 
 - Because it analyses your pre-assembled source, it can't take into account
-  optimisations made by your compiler.
+  optimisations made by your assembler.
 - While it adds profile information inside any macro definitions, it doesn't
   process macro invocations
 - Where timings are based on an 'n' multiplier from an immediate value, it
