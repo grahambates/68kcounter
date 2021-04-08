@@ -2,6 +2,16 @@
   "name": "68kcounter",
   "version": "1.0.2",
   "description": "68000 ASM source code cycle counter",
+  "keywords": [
+    "68000",
+    "assembly",
+    "asm",
+    "optimization",
+    "amiga",
+    "commodore",
+    "fs-uae",
+    "win-uae"
+  ],
   "scripts": {
     "test": "jest",
     "lint": "eslint . --ext .ts --ignore-path .gitignore",
