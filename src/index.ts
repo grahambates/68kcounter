@@ -12,7 +12,6 @@ export interface Line {
   words?: number;
 }
 
-/** Logical statement from code */
 export interface Instruction {
   mnemonic: Mnemonic;
   size: Size;
