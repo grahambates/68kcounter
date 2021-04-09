@@ -21,7 +21,7 @@ describe("parse()", () => {
           dest: { text: "d0", type: OperandType.Dn },
         },
         timings: { clock: 8, read: 2, write: 0 },
-        words: 1,
+        words: 2,
       },
       { text: "         ; Comment" },
       {

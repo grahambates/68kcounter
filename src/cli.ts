@@ -1,10 +1,23 @@
 #!/usr/bin/env node
 import fs from "fs";
 import path from "path";
-import chalk from "chalk";
+import chalk, { Color } from "chalk";
 import { argv } from "process";
-import parse from ".";
+import parse, {
+  calculateTotals,
+  formatTiming,
+  lengthLevel,
+  Level,
+  timingLevel,
+} from ".";
 import { Timing } from "./timings";
+
+const levelToColor: Record<Level, typeof Color> = {
+  [Level.VHigh]: "bgRed",
+  [Level.High]: "red",
+  [Level.Med]: "yellow",
+  [Level.Low]: "green",
+};
 
 if (!argv[2]) {
   console.error("Specify a filename");
@@ -24,9 +37,9 @@ lines.forEach((l) => {
   let annotation = "";
   if (l.timings) {
     if (Array.isArray(l.timings)) {
-      annotation += l.timings.map(formatTiming).join(" / ");
+      annotation += l.timings.map(formatTimingColored).join(" / ");
     } else {
-      annotation += formatTiming(l.timings);
+      annotation += formatTimingColored(l.timings);
     }
   }
   if (l.words) {
@@ -35,28 +48,24 @@ lines.forEach((l) => {
   console.log(pad(annotation, 30) + " | " + l.text);
 });
 
-function formatTiming(timing: Timing) {
-  const output = `${timing.clock}(${timing.read}/${timing.write})`;
-  if (timing.clock > 30) {
-    return chalk.bgRed(output);
-  }
-  if (timing.clock > 20) {
-    return chalk.red(output);
-  }
-  if (timing.clock >= 12) {
-    return chalk.yellow(output);
-  }
-  return chalk.green(output);
+const totals = calculateTotals(lines);
+console.log("\nTotals:");
+if (totals.isRange) {
+  console.log(formatTiming(totals.min) + " - " + formatTiming(totals.max));
+} else {
+  console.log(formatTiming(totals.min));
+}
+console.log(totals.words + " words (" + totals.words * 2 + " bytes)");
+
+function formatTimingColored(timing: Timing) {
+  const output = formatTiming(timing);
+  const level = timingLevel(timing);
+  return chalk[levelToColor[level]](output);
 }
 
 function colorWords(words: number) {
-  if (words > 2) {
-    return chalk.red(words);
-  }
-  if (words === 2) {
-    return chalk.yellow(words);
-  }
-  return chalk.green(words);
+  const level = lengthLevel(words);
+  return chalk[levelToColor[level]](words);
 }
 
 /**

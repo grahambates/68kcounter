@@ -166,12 +166,12 @@ const types: { type: OperandType; exp: RegExp }[] = [
   { type: OperandType.AnPreDec, exp: /^-\((a[0-7]|sr)\)$/i },
   {
     type: OperandType.AnDisp,
-    exp: /([0-9a-f]\(a[0-7]\)|\([0-9a-f],a[0-7]\))$/i,
+    exp: /([0-9a-f]\(a[0-7]\)|\([0-9a-f]+,a[0-7]\))$/i,
   },
   { type: OperandType.AnDispIx, exp: /a[0-7],d[0-7]\)$/i },
   {
     type: OperandType.PcDisp,
-    exp: /([0-9a-f]\(pc\)|\([0-9a-f],pc\))$/i,
+    exp: /([0-9a-f]\(pc\)|\([0-9a-f]+,pc\))$/i,
   },
   { type: OperandType.PcDispIx, exp: /pc,d[0-7]\)$/i },
   { type: OperandType.Imm, exp: /^#./i },
