@@ -4,7 +4,7 @@ import { Size } from "../src/mnemonics";
 import parse, { Line, parseLine } from "../src";
 
 describe("parse()", () => {
-  test.only("multi line", () => {
+  test("multi line", () => {
     const input = `label:
          MOVE.W  #1,d0 ; Comment
          ; Comment
@@ -58,7 +58,7 @@ describe("parseLine()", () => {
         dest: { text: "d0", type: OperandType.Dn },
       },
       timings: { clock: 8, read: 2, write: 0 },
-      words: 1,
+      words: 2,
     };
     expect(parseLine(text)).toEqual(expected);
   });
@@ -74,7 +74,7 @@ describe("parseLine()", () => {
         dest: { text: "d0", type: OperandType.Dn },
       },
       timings: { clock: 8, read: 2, write: 0 },
-      words: 1,
+      words: 2,
     };
     expect(parseLine(text)).toEqual(expected);
   });
@@ -90,7 +90,7 @@ describe("parseLine()", () => {
         dest: { text: "D0", type: OperandType.Dn },
       },
       timings: { clock: 8, read: 2, write: 0 },
-      words: 1,
+      words: 2,
     };
     expect(parseLine(text)).toEqual(expected);
   });
@@ -106,7 +106,7 @@ describe("parseLine()", () => {
         dest: { text: "d0", type: OperandType.Dn },
       },
       timings: { clock: 8, read: 2, write: 0 },
-      words: 1,
+      words: 2,
     };
     expect(parseLine(text)).toEqual(expected);
   });
@@ -123,7 +123,7 @@ describe("parseLine()", () => {
         dest: { text: "d0", type: OperandType.Dn },
       },
       timings: { clock: 8, read: 2, write: 0 },
-      words: 1,
+      words: 2,
     };
     expect(parseLine(text)).toEqual(expected);
   });
@@ -140,7 +140,7 @@ describe("parseLine()", () => {
         dest: { text: "d0", type: OperandType.Dn },
       },
       timings: { clock: 8, read: 2, write: 0 },
-      words: 1,
+      words: 2,
     };
     expect(parseLine(text)).toEqual(expected);
   });
@@ -210,6 +210,7 @@ describe("parseLine()", () => {
   test("assignment", () => {
     const text = "FOO EQU $1";
     const expected: Line = {
+      label: "FOO",
       text,
     };
     expect(parseLine(text)).toEqual(expected);

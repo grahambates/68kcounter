@@ -160,10 +160,10 @@ export function lookupOperandType(operand: string): OperandType | null {
  */
 const types: { type: OperandType; exp: RegExp }[] = [
   { type: OperandType.Dn, exp: /^d[0-7]$/i },
-  { type: OperandType.An, exp: /^(a[0-7]|sr)$/i },
-  { type: OperandType.AnIndir, exp: /^\((a[0-7]|sr)\)$/i },
-  { type: OperandType.AnPostInc, exp: /^\((a[0-7]|sr)\)\+$/i },
-  { type: OperandType.AnPreDec, exp: /^-\((a[0-7]|sr)\)$/i },
+  { type: OperandType.An, exp: /^(a[0-7]|sp)$/i },
+  { type: OperandType.AnIndir, exp: /^\((a[0-7]|sp)\)$/i },
+  { type: OperandType.AnPostInc, exp: /^\((a[0-7]|sp)\)\+$/i },
+  { type: OperandType.AnPreDec, exp: /^-\((a[0-7]|sp)\)$/i },
   {
     type: OperandType.AnDisp,
     exp: /([0-9a-f]\(a[0-7]\)|\([0-9a-f]+,a[0-7]\))$/i,

@@ -35,9 +35,9 @@ describe("parseOperandsText", () => {
   test("with range value", () => {
     const expected: Operands = {
       source: { type: OperandType.RegList, text: "d0-d6", value: 7 },
-      dest: { type: OperandType.AnPreDec, text: "-(sr)" },
+      dest: { type: OperandType.AnPreDec, text: "-(sp)" },
     };
-    expect(parseOperandsText("d0-d6,-(sr)")).toEqual(expected);
+    expect(parseOperandsText("d0-d6,-(sp)")).toEqual(expected);
   });
 });
 
@@ -50,25 +50,25 @@ describe("lookupArgType", () => {
   test("direct address", () => {
     expect(lookupOperandType("a0")).toEqual(OperandType.An);
     expect(lookupOperandType("a7")).toEqual(OperandType.An);
-    expect(lookupOperandType("sr")).toEqual(OperandType.An);
+    expect(lookupOperandType("sp")).toEqual(OperandType.An);
   });
 
   test("indirect", () => {
     expect(lookupOperandType("(a0)")).toEqual(OperandType.AnIndir);
     expect(lookupOperandType("(a7)")).toEqual(OperandType.AnIndir);
-    expect(lookupOperandType("(sr)")).toEqual(OperandType.AnIndir);
+    expect(lookupOperandType("(sp)")).toEqual(OperandType.AnIndir);
   });
 
   test("indirect post increment", () => {
     expect(lookupOperandType("(a0)+")).toEqual(OperandType.AnPostInc);
     expect(lookupOperandType("(a7)+")).toEqual(OperandType.AnPostInc);
-    expect(lookupOperandType("(sr)+")).toEqual(OperandType.AnPostInc);
+    expect(lookupOperandType("(sp)+")).toEqual(OperandType.AnPostInc);
   });
 
   test("indirect pre decrement", () => {
     expect(lookupOperandType("-(a0)")).toEqual(OperandType.AnPreDec);
     expect(lookupOperandType("-(a7)")).toEqual(OperandType.AnPreDec);
-    expect(lookupOperandType("-(sr)")).toEqual(OperandType.AnPreDec);
+    expect(lookupOperandType("-(sp)")).toEqual(OperandType.AnPreDec);
   });
 
   test("indirect displacement", () => {
