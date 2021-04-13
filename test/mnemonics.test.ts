@@ -55,18 +55,21 @@ describe("lookupArgType", () => {
 
   test("indirect", () => {
     expect(lookupOperandType("(a0)")).toEqual(OperandType.AnIndir);
+    expect(lookupOperandType("(  a0  )")).toEqual(OperandType.AnIndir);
     expect(lookupOperandType("(a7)")).toEqual(OperandType.AnIndir);
     expect(lookupOperandType("(sp)")).toEqual(OperandType.AnIndir);
   });
 
   test("indirect post increment", () => {
     expect(lookupOperandType("(a0)+")).toEqual(OperandType.AnPostInc);
+    expect(lookupOperandType("(  a0  )+")).toEqual(OperandType.AnPostInc);
     expect(lookupOperandType("(a7)+")).toEqual(OperandType.AnPostInc);
     expect(lookupOperandType("(sp)+")).toEqual(OperandType.AnPostInc);
   });
 
   test("indirect pre decrement", () => {
     expect(lookupOperandType("-(a0)")).toEqual(OperandType.AnPreDec);
+    expect(lookupOperandType("-(  a0  )")).toEqual(OperandType.AnPreDec);
     expect(lookupOperandType("-(a7)")).toEqual(OperandType.AnPreDec);
     expect(lookupOperandType("-(sp)")).toEqual(OperandType.AnPreDec);
   });
@@ -78,21 +81,26 @@ describe("lookupArgType", () => {
 
   test("indirect displacement - old", () => {
     expect(lookupOperandType("(1,a0)")).toEqual(OperandType.AnDisp);
+    expect(lookupOperandType("(  1,a0  )")).toEqual(OperandType.AnDisp);
   });
 
   test("indirect displacement with index", () => {
     expect(lookupOperandType("1(a0,d0)")).toEqual(OperandType.AnDispIx);
+    expect(lookupOperandType("1( a0,d0 )")).toEqual(OperandType.AnDispIx);
     expect(lookupOperandType("(1,a0,d0)")).toEqual(OperandType.AnDispIx);
+    expect(lookupOperandType("(  1,a0,d0  )")).toEqual(OperandType.AnDispIx);
   });
 
   test("indirect displacement", () => {
     expect(lookupOperandType("1(pc)")).toEqual(OperandType.PcDisp);
     expect(lookupOperandType("(1,pc)")).toEqual(OperandType.PcDisp);
+    expect(lookupOperandType("(  1,pc  )")).toEqual(OperandType.PcDisp);
   });
 
   test("indirect displacement with index PC", () => {
     expect(lookupOperandType("1(pc,d0)")).toEqual(OperandType.PcDispIx);
-    expect(lookupOperandType("(1,pc,d0)")).toEqual(OperandType.PcDispIx);
+    expect(lookupOperandType("1(  pc,d0  )")).toEqual(OperandType.PcDispIx);
+    expect(lookupOperandType("(  1,pc,d0  )")).toEqual(OperandType.PcDispIx);
   });
 
   test("immediate", () => {
