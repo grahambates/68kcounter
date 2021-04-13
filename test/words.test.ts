@@ -87,4 +87,13 @@ describe("getWords", () => {
       })
     ).toEqual(2);
   });
+
+  test("NOP", () => {
+    expect(
+      getWords({
+        mnemonic: "NOP",
+        size: Size.NA,
+      })
+    ).toEqual(1);
+  });
 });

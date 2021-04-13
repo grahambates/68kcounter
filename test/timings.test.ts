@@ -64,4 +64,16 @@ describe("lookupTiming", () => {
       write: 0,
     });
   });
+
+  test("nop", () => {
+    const stmt: Instruction = {
+      mnemonic: "NOP",
+      size: Size.NA,
+    };
+    expect(lookupTiming(stmt)).toEqual({
+      clock: 4,
+      read: 1,
+      write: 0,
+    });
+  });
 });

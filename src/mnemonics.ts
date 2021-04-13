@@ -192,7 +192,7 @@ export const mnemonicSizes: Record<Mnemonic, Size[]> = {
   BCLR: bl,
   BSET: bl,
   BTST: bl,
-  CHK: bwl,
+  CHK: wl,
   CLR: bwl,
   CMP: bwl,
   CMPM: bwl,
