@@ -215,4 +215,20 @@ describe("parseLine()", () => {
     };
     expect(parseLine(text)).toEqual(expected);
   });
+
+  test.only("whitespace in operand", () => {
+    const text = "     move.b	(  a2,a5.w ),d1";
+    const expected: Line = {
+      text,
+      instruction: {
+        mnemonic: "MOVE",
+        size: Size.B,
+        source: { text: "(a2,a5.w)", type: OperandType.AnDispIx },
+        dest: { text: "d1", type: OperandType.Dn },
+      },
+      timings: { clock: 14, read: 3, write: 0 },
+      words: 2,
+    };
+    expect(parseLine(text)).toEqual(expected);
+  });
 });

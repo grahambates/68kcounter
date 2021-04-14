@@ -117,6 +117,7 @@ describe("lookupArgType", () => {
     // whitespace
     expect(lookupOperandType("1( a0,d0 )")).toEqual(OperandType.AnDispIx);
     expect(lookupOperandType("(  1,a0,d0  )")).toEqual(OperandType.AnDispIx);
+    expect(lookupOperandType("( a2,a5.w)")).toEqual(OperandType.AnDispIx);
   });
 
   test("indirect displacement", () => {

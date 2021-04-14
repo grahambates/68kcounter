@@ -34,7 +34,10 @@ export default function parse(input: string): Line[] {
  */
 export function parseLine(text: string, vars: Vars = {}): Line {
   // Remove comments and split line on whitespace
-  const [labelText, mnemText, opText] = text.split(";")[0].split(/\s+/);
+  const [labelText, mnemText, ...rest] = text.split(";")[0].split(/\s+/);
+  const opText = rest.join("");
+
+  console.log({ mnemText, opText });
 
   const label = labelText.replace(/:$/, "") || undefined;
 
