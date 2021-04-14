@@ -155,27 +155,68 @@ export function lookupOperandType(operand: string): OperandType | null {
   return matching ? matching.type : null;
 }
 
+// Common regex components
+const dn = "(d[0-7])";
+const an = "(a[0-7]|sp)";
+const rn = "([ad][0-7]|sp)";
+const pc = "pc";
+const op = "\\(\\s*";
+const cp = "\\s*\\)";
+const comma = "\\s*,\\s*";
+const idx = `${rn}(\\.(w|l))?`;
+
 /**
  * Regular expressions to identify operand type from text.
  */
 const types: { type: OperandType; exp: RegExp }[] = [
-  { type: OperandType.Dn, exp: /^d[0-7]$/i },
-  { type: OperandType.An, exp: /^(a[0-7]|sp)$/i },
-  { type: OperandType.AnIndir, exp: /^\(\s*(a[0-7]|sp)\s*\)$/i },
-  { type: OperandType.AnPostInc, exp: /^\(\s*(a[0-7]|sp)\s*\)\+$/i },
-  { type: OperandType.AnPreDec, exp: /^-\(\s*(a[0-7]|sp)\s*\)$/i },
+  { type: OperandType.Dn, exp: new RegExp(`^${dn}$`, "i") },
+  { type: OperandType.An, exp: new RegExp(`^${an}$`, "i") },
+  {
+    type: OperandType.AnIndir,
+    exp: new RegExp(`^${op + an + cp}$`, "i"),
+  },
+  {
+    type: OperandType.AnPostInc,
+    // (An)+
+    exp: new RegExp(`^${op + an + cp}\\+$`, "i"),
+  },
+  {
+    type: OperandType.AnPreDec,
+    // -(An)
+    exp: new RegExp(`^-${op + an + cp}$`, "i"),
+  },
+  {
+    type: OperandType.AnDispIx,
+    // An,Idx)
+    exp: new RegExp(an + comma + idx + cp, "i"),
+  },
   {
     type: OperandType.AnDisp,
-    exp: /([0-9a-f]\(\s*a[0-7]\s*\)|\(\s*[0-9a-f]+,a[0-7]\s*\))$/i,
+    exp: new RegExp(
+      // d(An) | (d,An)
+      `(\\w${op + an}|${op}\\w+${comma + an + cp}$)`,
+      "i"
+    ),
   },
-  { type: OperandType.AnDispIx, exp: /a[0-7],d[0-7]\s*\)$/i },
+  {
+    type: OperandType.PcDispIx,
+    // PC,Idx)
+    exp: new RegExp(pc + comma + idx + cp, "i"),
+  },
   {
     type: OperandType.PcDisp,
-    exp: /([0-9a-f]\(\s*pc\s*\)|\(\s*[0-9a-f]+,pc\s*\))$/i,
+    exp: new RegExp(
+      // d(PC) | (d,PC)
+      `(\\w${op + pc}|${op}\\w+${comma + pc + cp}$)`,
+      "i"
+    ),
   },
-  { type: OperandType.PcDispIx, exp: /pc,d[0-7]\s*\)$/i },
   { type: OperandType.Imm, exp: /^#./i },
-  { type: OperandType.RegList, exp: /(d|a)[0-7](\/|-)(d|a)[0-7]/i },
+  {
+    type: OperandType.RegList,
+    // Rn[/-]Rn
+    exp: new RegExp(`${rn}[\\/-]${rn}`, "i"),
+  },
   { type: OperandType.AbsW, exp: /\.W$/i },
   { type: OperandType.AbsL, exp: /./i }, // Default
 ];
