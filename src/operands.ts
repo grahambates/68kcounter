@@ -142,8 +142,7 @@ export function evalImmediate(
   try {
     return Parser.evaluate(val, vars);
   } catch (e) {
-    // console.warn(val);
-    // console.warn(e.message);
+    // ignore
   }
 }
 

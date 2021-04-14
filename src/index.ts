@@ -37,8 +37,6 @@ export function parseLine(text: string, vars: Vars = {}): Line {
   const [labelText, mnemText, ...rest] = text.split(";")[0].split(/\s+/);
   const opText = rest.join("");
 
-  console.log({ mnemText, opText });
-
   const label = labelText.replace(/:$/, "") || undefined;
 
   let instruction = mnemText && parseMnemonicText(mnemText);
@@ -64,10 +62,6 @@ export function parseLine(text: string, vars: Vars = {}): Line {
         break;
       }
     }
-  }
-
-  if (!timings) {
-    console.warn("Timing not found for instruction", instruction);
   }
 
   return {
