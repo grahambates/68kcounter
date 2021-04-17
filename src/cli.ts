@@ -8,15 +8,16 @@ import parse, {
   formatTiming,
   lengthLevel,
   Level,
+  Levels,
   timingLevel,
 } from ".";
 import { Timing } from "./timings";
 
 const levelToColor: Record<Level, typeof Color> = {
-  [Level.VHigh]: "bgRed",
-  [Level.High]: "red",
-  [Level.Med]: "yellow",
-  [Level.Low]: "green",
+  [Levels.VHigh]: "bgRed",
+  [Levels.High]: "red",
+  [Levels.Med]: "yellow",
+  [Levels.Low]: "green",
 };
 
 if (!argv[2]) {
@@ -36,11 +37,7 @@ const lines = parse(file);
 lines.forEach((l) => {
   let annotation = "";
   if (l.timings) {
-    if (Array.isArray(l.timings)) {
-      annotation += l.timings.map(formatTimingColored).join(" / ");
-    } else {
-      annotation += formatTimingColored(l.timings);
-    }
+    annotation += l.timings.map(formatTimingColored).join(" / ");
   }
   if (l.words) {
     annotation += " " + colorWords(l.words);

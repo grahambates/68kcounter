@@ -43,7 +43,7 @@ Demo:
 ; Init:
              move.l      #VBint,$6c(a4)
              move.w      #INTF,intena(a6)
-             move.w      #DMAF,dmacon(a6)
+             move.w      #DMAF,dmacon(a6)                   ; dsf
 
              lea         Arr,a0
              move.w      #8,d0
@@ -55,7 +55,8 @@ Demo:
              lea         Screen2,a1
              bsr         CopyImage
 
-             lea         Copper1,a0
+             lea         Copper1,
+             a0
              bsr         CopyCopper
              lea         Copper2,a0
              bsr         CopyCopper
