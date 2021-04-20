@@ -58,7 +58,10 @@ export function instructionTimings(
         calculation.n = 63; // Maximum value for register
       }
     } else if (mnemonic.value === Mnemonics.MOVEM) {
-      calculation.n = rangeN(operands[0].text);
+      const operand = operands.find(
+        (o) => o.addressingMode === AddressingModes.RegList
+      );
+      calculation.n = operand && rangeN(operand.text);
     }
 
     if (calculation.n) {

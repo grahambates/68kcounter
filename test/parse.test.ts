@@ -242,10 +242,16 @@ describe("parse()", () => {
       expect(result.timings).toEqual([[12, 2, 1]]);
     });
 
-    test("movem n multiplier", () => {
+    test("movem n multiplier - source", () => {
       const [result] = parse(" movem.l d0-a6,-(sp)");
       const n = 15;
       expect(result.timings).toEqual([[8 + 8 * n, 2, 2 * n]]);
+    });
+
+    test("movem n multiplier - dest", () => {
+      const [result] = parse(" movem.l DrawBuffer(PC),a2-a3");
+      const n = 2;
+      expect(result.timings).toEqual([[16 + 8 * n, 4 + 2 * n, 0]]);
     });
 
     test("shift n multiplier", () => {
