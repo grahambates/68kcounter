@@ -278,6 +278,11 @@ describe("parse()", () => {
       expect(result.timings).toEqual([[6 + 2 * n, 1, 0]]);
     });
 
+    test("btst register -> immediate", () => {
+      const [result] = parse(" btst.b d0,#1");
+      expect(result.timings).toEqual([[10, 2, 0]]);
+    });
+
     test("nop", () => {
       const [result] = parse(" nop");
       expect(result.timings).toEqual([[4, 1, 0]]);
