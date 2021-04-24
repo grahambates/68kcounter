@@ -39,8 +39,8 @@ lines.forEach((l) => {
   if (l.timings) {
     annotation += l.timings.map(formatTimingColored).join(" / ");
   }
-  if (l.words) {
-    annotation += " " + colorWords(l.words);
+  if (l.bytes) {
+    annotation += " " + colorWords(l.bytes);
   }
   console.log(pad(annotation, 30) + " | " + l.text);
 });
@@ -52,7 +52,7 @@ if (totals.isRange) {
 } else {
   console.log(formatTiming(totals.min));
 }
-console.log(totals.words + " words (" + totals.words * 2 + " bytes)");
+console.log(totals.bytes + " bytes");
 
 function formatTimingColored(timing: Timing) {
   const output = formatTiming(timing);

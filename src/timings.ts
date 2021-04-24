@@ -1,4 +1,4 @@
-import { Instruction, evalImmediate, rangeN } from "./parse";
+import { Instruction, rangeN } from "./parse";
 import { baseTimes, lookupTimes } from "./timingTables";
 import {
   Sizes,
@@ -53,7 +53,7 @@ export function instructionTimings(
     if (mnemonicGroups.SHIFT.includes(mnemonic.value)) {
       const mode = operands[0].addressingMode;
       if (mode === AddressingModes.Imm) {
-        calculation.n = evalImmediate(operands[0].text) || 8; // Default to maximum for immediate
+        calculation.n = operands[0].value || 8; // Default to maximum for immediate
       } else {
         calculation.n = 63; // Maximum value for register
       }

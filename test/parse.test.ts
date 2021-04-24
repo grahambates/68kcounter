@@ -4,7 +4,7 @@ import parse, {
   lookupAddressingMode,
   rangeN,
 } from "../src/parse";
-import { Mnemonics, AddressingModes, Sizes } from "../src/syntax";
+import { Mnemonics, AddressingModes, Sizes, Directives } from "../src/syntax";
 
 describe("parse()", () => {
   test("parse file", () => {
@@ -94,7 +94,7 @@ describe("parse()", () => {
 
     test("with label", () => {
       const [result] = parse("foo:   move.w     d0,(a0)");
-      expect(result.label.text).toEqual("foo:");
+      expect(result.label.text).toEqual("foo");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
       expect(result.instruction.size.value).toEqual(Sizes.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
@@ -109,7 +109,7 @@ describe("parse()", () => {
 
     test("with label - local", () => {
       const [result] = parse(".foo:   move.w     d0,(a0)");
-      expect(result.label.text).toEqual(".foo:");
+      expect(result.label.text).toEqual(".foo");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
       expect(result.instruction.size.value).toEqual(Sizes.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
@@ -180,6 +180,65 @@ describe("parse()", () => {
     });
   });
 
+  test("label no space", () => {
+    const [result] = parse("a:MOVE.W D0,(A0)");
+    expect(result.label.text).toEqual("a");
+    expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
+    expect(result.instruction.size.value).toEqual(Sizes.W);
+    expect(result.instruction.operands[0].addressingMode).toEqual(
+      AddressingModes.Dn
+    );
+    expect(result.instruction.operands[1].addressingMode).toEqual(
+      AddressingModes.AnIndir
+    );
+    expect(result.timings).toBeTruthy();
+    expect(result.words).toBeTruthy();
+  });
+
+  describe("directives", () => {
+    test("assignment EQU", () => {
+      const [result] = parse("foo EQU 1");
+      expect(result.label.text).toEqual("foo");
+      expect(result.directive.directive.value).toEqual(Directives.EQU);
+      expect(result.directive.args[0].text).toEqual("1");
+    });
+
+    test("assignment =", () => {
+      const [result] = parse("foo = 1");
+      expect(result.label.text).toEqual("foo");
+      expect(result.directive.directive.value).toEqual(Directives["="]);
+      expect(result.directive.args[0].text).toEqual("1");
+    });
+
+    test("assignment =", () => {
+      const [result] = parse("foo=1");
+      expect(result.label.text).toEqual("foo");
+      expect(result.directive.directive.value).toEqual(Directives["="]);
+      expect(result.directive.args[0].text).toEqual("1");
+    });
+
+    test("memory", () => {
+      const [result] = parse("a: dc.w 1,2,3");
+      expect(result.label.text).toEqual("a");
+      expect(result.directive.directive.value).toEqual(Directives.DC);
+      expect(result.directive.args[0].text).toEqual("1");
+      expect(result.directive.args[1].text).toEqual("2");
+      expect(result.directive.args[2].text).toEqual("3");
+    });
+  });
+
+  describe("parse assignments", () => {
+    test("dynamic shift", () => {
+      const code = `
+foo=4
+      lsl.w #foo,d0
+      `;
+      const lines = parse(code);
+      const n = 4;
+      expect(lines[2].timings).toEqual([[6 + 2 * n, 1, 0]]);
+    });
+  });
+
   describe("no instruction", () => {
     test("empty line", () => {
       const [result] = parse("");
@@ -209,13 +268,13 @@ describe("parse()", () => {
 
     test("only label", () => {
       const [result] = parse("foo:");
-      expect(result.label.text).toEqual("foo:");
+      expect(result.label.text).toEqual("foo");
       expect(result.instruction).toBeFalsy();
     });
 
     test("only label - local", () => {
       const [result] = parse(".foo:");
-      expect(result.label.text).toEqual(".foo:");
+      expect(result.label.text).toEqual(".foo");
       expect(result.instruction).toBeFalsy();
     });
 
@@ -289,55 +348,94 @@ describe("parse()", () => {
     });
   });
 
-  describe("word sizes", () => {
+  describe("byte sizes", () => {
     test("immediate W", () => {
       const [result] = parse(" add.w #1,d0");
-      expect(result.words).toEqual(2);
+      expect(result.bytes).toEqual(4);
     });
 
     test("immediate L", () => {
       const [result] = parse(" add.l #1,d0");
-      expect(result.words).toEqual(3);
+      expect(result.bytes).toEqual(6);
     });
 
     test("immediate quick", () => {
       const [result] = parse(" addq #1,d0");
-      expect(result.words).toEqual(1);
+      expect(result.bytes).toEqual(2);
     });
 
     test("abs.w", () => {
       const [result] = parse(" add.l d0,$f00.w");
-      expect(result.words).toEqual(2);
+      expect(result.bytes).toEqual(4);
     });
 
     test("abs.l", () => {
       const [result] = parse(" add.l d0,$f00");
-      expect(result.words).toEqual(3);
+      expect(result.bytes).toEqual(6);
     });
 
     test("bit operation", () => {
       const [result] = parse(" bchg #1,d0");
-      expect(result.words).toEqual(2);
+      expect(result.bytes).toEqual(4);
     });
 
     test("Bcc short", () => {
       const [result] = parse(" bra.s #foo");
-      expect(result.words).toEqual(1);
+      expect(result.bytes).toEqual(2);
     });
 
     test("Bcc word", () => {
       const [result] = parse(" bra.w #foo");
-      expect(result.words).toEqual(2);
+      expect(result.bytes).toEqual(4);
     });
 
     test("movem", () => {
       const [result] = parse(" movem.w d0-d6,-(sp)");
-      expect(result.words).toEqual(2);
+      expect(result.bytes).toEqual(4);
     });
 
     test("nop", () => {
       const [result] = parse(" nop");
-      expect(result.words).toEqual(1);
+      expect(result.bytes).toEqual(2);
+    });
+
+    test("dc.w", () => {
+      const [result] = parse(" dc.w 0,0,0");
+      expect(result.bytes).toEqual(6);
+    });
+
+    test("dw", () => {
+      const [result] = parse(" dw 0,0,0");
+      expect(result.bytes).toEqual(6);
+    });
+
+    test("dc.x", () => {
+      const [result] = parse(" dc.x 0,0,0");
+      expect(result.bytes).toEqual(36);
+    });
+
+    test("dcb.w", () => {
+      const [result] = parse(" dcb.w #3");
+      expect(result.bytes).toEqual(6);
+    });
+
+    test("ds.w", () => {
+      const [result] = parse(" ds.w #3");
+      expect(result.bytes).toEqual(6);
+    });
+
+    test("dcb.w from vars", () => {
+      const code = `
+foo=2
+  dcb.w #foo*2
+`;
+      const result = parse(code);
+      expect(result[2].bytes).toEqual(8);
+    });
+
+    test("dc.b string", () => {
+      const [result] = parse('.GfxLib:dc.b "graphics.library",0,0');
+      expect(result.bytes).toEqual(18);
     });
   });
 });
@@ -532,6 +630,10 @@ describe("parseImmediate", () => {
     expect(evalImmediate("$ff")).toEqual(255);
   });
 
+  test.skip("octal", () => {
+    expect(evalImmediate("@10")).toEqual(8);
+  });
+
   test("binary", () => {
     expect(evalImmediate("%110")).toEqual(6);
   });
@@ -548,7 +650,7 @@ describe("parseImmediate", () => {
     expect(evalImmediate("(3+1)^2")).toEqual(16);
   });
 
-  test("power", () => {
+  test("vars", () => {
     expect(evalImmediate("x+y", { x: 1, y: 2 })).toEqual(3);
   });
 });

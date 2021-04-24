@@ -1,7 +1,4 @@
 type Values<T> = T[keyof T];
-export type Mnemonic = Values<typeof Mnemonics>;
-export type Size = Values<typeof Sizes>;
-export type AddressingMode = Values<typeof AddressingModes>;
 
 export const Mnemonics = {
   ABCD: "ABCD",
@@ -117,6 +114,8 @@ export const Mnemonics = {
   UNLK: "UNLK",
 } as const;
 
+export type Mnemonic = Values<typeof Mnemonics>;
+
 export function isMnemonic(v: string): v is Mnemonic {
   return Mnemonics[v as Mnemonic] !== undefined;
 }
@@ -125,11 +124,27 @@ export const Sizes = {
   B: "B",
   W: "W",
   L: "L",
+  Q: "Q",
+  S: "S",
+  D: "D",
+  X: "X",
 } as const;
+
+export type Size = Values<typeof Sizes>;
 
 export function isSize(v: string): v is Size {
   return Sizes[v as Size] !== undefined;
 }
+
+export const sizeBytes: Record<Size, number> = {
+  [Sizes.B]: 1,
+  [Sizes.W]: 2,
+  [Sizes.L]: 4,
+  [Sizes.S]: 4,
+  [Sizes.D]: 8,
+  [Sizes.Q]: 8,
+  [Sizes.X]: 12,
+};
 
 export const AddressingModes = {
   Dn: "Dn",
@@ -146,6 +161,8 @@ export const AddressingModes = {
   RegList: "RegList",
   Imm: "#xxx",
 } as const;
+
+export type AddressingMode = Values<typeof AddressingModes>;
 
 // Groups
 
@@ -244,3 +261,114 @@ export const addressingModeGroups: Record<
     AddressingModes.AbsL,
   ],
 };
+
+export const Directives = {
+  // Memory:
+  DC: "DC",
+  DCB: "DCB",
+  DS: "DS",
+  DB: "DB",
+  DW: "DW",
+  DL: "DL",
+  // Sections:
+  SECTION: "SECTION",
+  BSS: "BSS",
+  BSS_C: "BSS_C",
+  BSS_F: "BSS_F",
+  CSEG: "CSEG",
+  CODE: "CODE",
+  CODE_C: "CODE_C",
+  CODE_F: "CODE_F",
+  DATA: "DATA",
+  DATA_C: "DATA_C",
+  DATA_F: "DATA_F",
+  DSEG: "DSEG",
+  // Assignements:
+  EQU: "EQU",
+  FEQU: "FEQU",
+  "=": "=",
+  // Imports:
+  INCLUDE: "INCLUDE",
+  INCDIR: "INCDIR",
+  INCBIN: "INCBIN",
+  // Conditions:
+  IFEQ: "IFEQ",
+  IFNE: "IFNE",
+  IFGT: "IFGT",
+  IFGE: "IFGE",
+  IFLT: "IFLT",
+  IFLE: "IFLE",
+  IFB: "IFB",
+  IFNB: "IFNB",
+  IFC: "IFC",
+  IFNC: "IFNC",
+  IFD: "IFD",
+  IFND: "IFND",
+  IFMACROD: "IFMACROD",
+  IFMACROND: "IFMACROND",
+  ELSE: "ELSE",
+  END: "END",
+  ENDIF: "ENDIF",
+  // Other:
+  OPT: "OPT",
+  ALIGN: "ALIGN",
+  CARGS: "CARGS",
+  CLRFO: "CLRFO",
+  CLRSO: "CLRSO",
+  CNOP: "CNOP",
+  COMM: "COMM",
+  COMMENT: "COMMENT",
+  ECHO: "ECHO",
+  EINLINE: "EINLINE",
+  ENDC: "ENDC",
+  ENDM: "ENDM",
+  ENDF: "ENDF",
+  ENDP: "ENDP",
+  ENDR: "ENDR",
+  EREM: "EREM",
+  EVEN: "EVEN",
+  FAIL: "FAIL",
+  FPU: "FPU",
+  IDNT: "IDNT",
+  INLINE: "INLINE",
+  JUMPPTR: "JUMPPTR",
+  LIST: "LIST",
+  LLEN: "LLEN",
+  LOAD: "LOAD",
+  MACHINE: "MACHINE",
+  MEXIT: "MEXIT",
+  MMU: "MMU",
+  NOLIST: "NOLIST",
+  NOPAGE: "NOPAGE",
+  NREF: "NREF",
+  ODD: "ODD",
+  OFFSET: "OFFSET",
+  OPWORD: "OPWORD",
+  ORG: "ORG",
+  OUTPUT: "OUTPUT",
+  PAGE: "PAGE",
+  PLEN: "PLEN",
+  PRINTT: "PRINTT",
+  PRINTV: "PRINTV",
+  PUBLIC: "PUBLIC",
+  RECORD: "RECORD",
+  REM: "REM",
+  REPT: "REPT",
+  RORG: "RORG",
+  RSRESET: "RSRESET",
+  RSSET: "RSSET",
+  SET: "SET",
+  SETFO: "SETFO",
+  SETSO: "SETSO",
+  SPC: "SPC",
+  TEXT: "TEXT",
+  TTL: "TTL",
+  WEAK: "WEAK",
+  XDEF: "XDEF",
+  XREF: "XREF",
+} as const;
+
+export type Directive = Values<typeof Directives>;
+export function isDirective(v: string): v is Directive {
+  return Directives[v as Directive] !== undefined;
+}

@@ -12,20 +12,20 @@ export interface Totals {
   /** Minimum total times */
   min: Timing;
   /** Total word length */
-  words: number;
+  bytes: number;
 }
 
 /**
  * Total timings and lengths across a range of lines
  */
 export function calculateTotals(lines: Line[]): Totals {
-  let words = 0;
+  let bytes = 0;
   const min: Timing = [0, 0, 0];
   const max: Timing = [0, 0, 0];
 
   for (const line of lines) {
-    if (line.words) {
-      words += line.words;
+    if (line.bytes) {
+      bytes += line.bytes;
     }
     const timings = line.timings;
     if (!timings) {
@@ -45,5 +45,5 @@ export function calculateTotals(lines: Line[]): Totals {
 
   const isRange = min[0] !== max[0] || min[1] !== max[1] || min[2] !== max[2];
 
-  return { min, max, isRange, words };
+  return { min, max, isRange, bytes };
 }
