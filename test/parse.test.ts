@@ -437,6 +437,18 @@ foo=2
       const [result] = parse('.GfxLib:dc.b "graphics.library",0,0');
       expect(result.bytes).toEqual(18);
     });
+
+    test("dcb.w from label range", () => {
+      const code = `
+start:
+      dc.w 0
+      dc.l 0
+end:
+      dcb.b end-start
+`;
+      const result = parse(code);
+      expect(result[5].bytes).toEqual(6);
+    });
   });
 });
 

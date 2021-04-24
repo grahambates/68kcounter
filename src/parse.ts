@@ -82,8 +82,15 @@ export default function parse(input: string): Line[] {
     Directives.EQU,
     Directives.FEQU,
   ];
+
+  let bytes = 0;
+
   for (const i in lines) {
     const line = lines[i];
+
+    if (line.label) {
+      vars[line.label.text] = bytes;
+    }
 
     if (line.directive) {
       const { directive, size, args } = line.directive;
@@ -158,6 +165,8 @@ export default function parse(input: string): Line[] {
       line.words = instructionLength(line.instruction);
       line.bytes = line.words * 2;
     }
+
+    if (line.bytes) bytes += line.bytes;
   }
   return lines;
 }
