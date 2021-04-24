@@ -630,7 +630,7 @@ describe("parseImmediate", () => {
     expect(evalImmediate("$ff")).toEqual(255);
   });
 
-  test.skip("octal", () => {
+  test("octal", () => {
     expect(evalImmediate("@10")).toEqual(8);
   });
 
@@ -642,15 +642,29 @@ describe("parseImmediate", () => {
     expect(evalImmediate("$2+%10+2")).toEqual(6);
   });
 
-  test("power", () => {
-    expect(evalImmediate("4^2")).toEqual(16);
-  });
-
   test("parens", () => {
-    expect(evalImmediate("(3+1)^2")).toEqual(16);
+    expect(evalImmediate("(3+1)*2")).toEqual(8);
   });
 
   test("vars", () => {
     expect(evalImmediate("x+y", { x: 1, y: 2 })).toEqual(3);
+  });
+
+  test("xor", () => {
+    expect(evalImmediate("12^8")).toEqual(4);
+    expect(evalImmediate("12~8")).toEqual(4);
+  });
+
+  test("or", () => {
+    expect(evalImmediate("2|4")).toEqual(6);
+    expect(evalImmediate("2!4")).toEqual(6);
+  });
+
+  test("modulo", () => {
+    expect(evalImmediate("11%4")).toEqual(3);
+  });
+
+  test("not", () => {
+    expect(evalImmediate("~1")).toEqual(-2);
   });
 });

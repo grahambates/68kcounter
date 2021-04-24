@@ -1,4 +1,4 @@
-import { Parser } from "expr-eval";
+import * as expEval from "expression-eval";
 import { Calculation, instructionTimings, Timing } from "./timings";
 import instructionLength from "./instructionLength";
 import {
@@ -390,14 +390,24 @@ export function evalImmediate(
   val: string,
   vars: Record<string, number> = {}
 ): number | undefined {
-  val = val.replace(/^#/, "").replace("$", "0x").replace("%", "0b");
-  // TODO: support octal
-  // .replace("@", "0");
-  // TODO: support binary ops
+  val = val
+    .replace(/^#/g, "")
+    // Hex
+    .replace(/\$([0-9a-f]+)/gi, (_, p1) => eval("0x" + p1))
+    // Binary
+    .replace(/%([0-1]+)/gi, (_, p1) => eval("0b" + p1))
+    // Octal
+    .replace(/@([0-7]+)/gi, (_, p1) => eval("0o" + p1))
+    // OR
+    .replace(/(?<=[a-z0-9_])!(?=[a-z0-9_])/g, "|")
+    // XOR
+    .replace(/(?<=[a-z0-9_])~(?=[a-z0-9_])/g, "^");
+
   try {
-    return Parser.evaluate(val, vars);
+    const ast = expEval.parse(val);
+    return expEval.eval(ast, vars);
   } catch (e) {
-    // ignore
+    // ignore;
   }
 }
 
