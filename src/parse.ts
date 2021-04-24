@@ -2,20 +2,22 @@ import * as expEval from "expression-eval";
 import { Calculation, instructionTimings, Timing } from "./timings";
 import instructionLength from "./instructionLength";
 import {
-  isMnemonic,
-  isSize,
-  isDirective,
-  Mnemonics,
-  Mnemonic,
   AddressingModes,
   AddressingMode,
   Sizes,
-  Size,
   Directives,
   Directive,
   mnemonicGroups,
   sizeBytes,
 } from "./syntax";
+import {
+  DirectiveToken,
+  MnemonicToken,
+  OperandToken,
+  SizeToken,
+  Token,
+  tokenize,
+} from "./tokens";
 
 export interface Line {
   text: string;
@@ -31,7 +33,6 @@ export interface Line {
 
   timings?: Timing[] | null;
   calculation?: Calculation;
-  words?: number;
   bytes?: number;
 }
 
@@ -41,133 +42,129 @@ export interface Instruction {
   operands: OperandToken[];
 }
 
-export interface Token {
-  text: string;
-  type: string;
-  start: number;
-  end: number;
-}
-
-export interface MnemonicToken extends Token {
-  type: "Mnemonic";
-  value: Mnemonic;
-}
-
-export interface SizeToken extends Token {
-  type: "Size";
-  value: Size;
-}
-
-export interface OperandToken extends Token {
-  type: "Operand";
-  addressingMode: AddressingMode;
-  value?: number;
-}
-
-export interface DirectiveToken extends Token {
-  type: "Directive";
-  value: Directive;
-}
+const assignments: Directive[] = [
+  Directives["="],
+  Directives.EQU,
+  Directives.FEQU,
+];
 
 /**
  * Parse multiple lines of ASM code
  */
 export default function parse(input: string): Line[] {
-  input = input.replace(/\r\n/, "\n");
-  input = input.replace(/\r/, "\n");
-  const lines = input.split("\n").map((l) => parseLine(l));
+  const inputLines = input
+    .replace(/\r\n/, "\n")
+    .replace(/\r/, "\n")
+    .split("\n");
+
+  // Initial parse of input lines:
+  const lines = inputLines.map((l) => parseLine(l));
+
+  // Now do additional parsing to add size and timing information.
+  // For this we need context from the rest of the document.
+
+  // Track variables
   const vars: Record<string, number> = {};
-  const assignments: Directive[] = [
-    Directives["="],
-    Directives.EQU,
-    Directives.FEQU,
-  ];
 
-  let bytes = 0;
+  // Do two passes to catch back references:
+  for (let i = 0; i < 2; i++) {
+    let bytes = 0;
 
-  for (const i in lines) {
-    const line = lines[i];
+    for (const i in lines) {
+      const line = lines[i];
 
-    if (line.label) {
-      vars[line.label.text] = bytes;
+      // Assign running total of bytes to labels names
+      // This allows expressions to get byte count from ranges e.g. `dcb.b END-START`
+      if (line.label && !line.directive) {
+        vars[line.label.text] = bytes;
+      }
+
+      if (line.directive) {
+        const { directive, size, args } = line.directive;
+
+        // Variable Assignment:
+        if (
+          line.label &&
+          vars[line.label.text] === undefined &&
+          assignments.includes(directive.value) &&
+          args &&
+          args[0]
+        ) {
+          const value = evalImmediate(args[0].text, vars);
+          if (value) {
+            vars[line.label.text] = value;
+          }
+          continue;
+        }
+
+        // Get size of memory blocks:
+        if (!line.bytes) {
+          // DC:
+          if (directive.value === Directives.DC && size && args) {
+            if (size.value === Sizes.B) {
+              line.bytes = byteCount(args);
+            } else {
+              line.bytes = args.length * sizeBytes[size.value];
+            }
+          } else if (directive.value === Directives.DB && args) {
+            line.bytes = byteCount(args);
+          } else if (directive.value === Directives.DW && args) {
+            line.bytes = args.length * 2;
+          } else if (directive.value === Directives.DL && args) {
+            line.bytes = args.length * 4;
+          }
+
+          // DCB / DS:
+          else if (
+            (directive.value === Directives.DCB ||
+              directive.value === Directives.DS) &&
+            size &&
+            args &&
+            args[0]
+          ) {
+            const n = evalImmediate(args[0].text, vars);
+            if (n) {
+              const bytes = sizeBytes[size.value];
+              line.bytes = bytes * n;
+            }
+          }
+        }
+      }
+
+      // Process instruction:
+      if (line.instruction) {
+        const { mnemonic, operands } = line.instruction;
+
+        // Evaluate immediate values where required for timing calculations:
+        if (
+          operands[0]?.value === undefined &&
+          mnemonicGroups.SHIFT.includes(mnemonic.value)
+        ) {
+          const mode = operands[0].addressingMode;
+          if (mode === AddressingModes.Imm) {
+            operands[0].value = evalImmediate(operands[0].text, vars);
+          }
+        }
+
+        // Lookup timings:
+        if (!line.timings || operands[0]?.value) {
+          const timingResult = instructionTimings(line.instruction);
+          if (timingResult) {
+            line.timings = timingResult.timings;
+            line.calculation = timingResult.calculation;
+          }
+        }
+
+        // Get bytes from instruction length:
+        if (!line.bytes) {
+          line.bytes = instructionLength(line.instruction) * 2;
+        }
+      }
+
+      if (line.bytes) bytes += line.bytes;
     }
-
-    if (line.directive) {
-      const { directive, size, args } = line.directive;
-      // Assignment:
-      if (
-        line.label &&
-        assignments.includes(directive.value) &&
-        args &&
-        args[0]
-      ) {
-        const value = evalImmediate(args[0].text, vars);
-        if (value) {
-          vars[line.label.text] = value;
-        }
-        continue;
-      }
-
-      // Memory:
-      // TODO:
-      // don't add bytes if in BSS?
-      // DX
-      // DR
-
-      // DC:
-      if (directive.value === Directives.DC && size && args) {
-        if (size.value === Sizes.B) {
-          line.bytes = byteCount(args);
-        } else {
-          line.bytes = args.length * sizeBytes[size.value];
-        }
-      } else if (directive.value === Directives.DB && args) {
-        line.bytes = byteCount(args);
-      } else if (directive.value === Directives.DW && args) {
-        line.bytes = args.length * 2;
-      } else if (directive.value === Directives.DL && args) {
-        line.bytes = args.length * 4;
-      }
-      // DCB / DS:
-      else if (
-        (directive.value === Directives.DCB ||
-          directive.value === Directives.DS) &&
-        size &&
-        args &&
-        args[0]
-      ) {
-        const n = evalImmediate(args[0].text, vars);
-        if (n) {
-          const bytes = sizeBytes[size.value];
-          line.bytes = bytes * n;
-        }
-      }
-    }
-
-    // Instruction:
-    if (line.instruction) {
-      const { mnemonic, operands } = line.instruction;
-
-      // Evaluate immediate values where required using variables
-      if (mnemonicGroups.SHIFT.includes(mnemonic.value)) {
-        const mode = operands[0].addressingMode;
-        if (mode === AddressingModes.Imm) {
-          operands[0].value = evalImmediate(operands[0].text, vars);
-        }
-      }
-
-      const timingResult = instructionTimings(line.instruction);
-      if (timingResult) {
-        line.timings = timingResult.timings;
-        line.calculation = timingResult.calculation;
-      }
-
-      line.words = instructionLength(line.instruction);
-      line.bytes = line.words * 2;
-    }
-
-    if (line.bytes) bytes += line.bytes;
   }
+
   return lines;
 }
 
@@ -236,159 +233,6 @@ function byteCount(args: Token[]): number {
   return count;
 }
 
-function getToken(text: string, start: number, separator = ""): Token {
-  const end = start + text.length;
-  const props = { text, start, end };
-  let normalized = text.toUpperCase();
-  if (aliases[normalized]) {
-    normalized = aliases[normalized];
-  }
-
-  // Identify know token types
-  if (text[0] === ";" || text[0] === "*") {
-    return { type: "Comment", ...props };
-  } else if (start === 0) {
-    return { type: "Label", ...props };
-  } else if (isMnemonic(normalized)) {
-    const token: MnemonicToken = {
-      type: "Mnemonic",
-      value: normalized,
-      ...props,
-    };
-    return token;
-  } else if (isDirective(normalized)) {
-    const token: DirectiveToken = {
-      type: "Directive",
-      value: normalized,
-      ...props,
-    };
-    return token;
-  } else if (separator === "." && isSize(normalized)) {
-    const token: SizeToken = { type: "Size", value: normalized, ...props };
-    return token;
-  }
-
-  return { type: "Unknown", ...props };
-}
-
-const separators = [" ", "\t", ",", ":"];
-
-function tokenize(text: string): Token[] {
-  let parenLevel = 0;
-  let inDoubleQuotes = false;
-  let inSingleQuotes = false;
-  let started = false;
-  let startIndex = 0;
-  let separator = "";
-
-  const tokens: Token[] = [];
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-
-    // Toggle quoting
-    if (!inSingleQuotes && char === '"') {
-      inDoubleQuotes = !inDoubleQuotes;
-    }
-    if (!inDoubleQuotes && char === "'") {
-      inSingleQuotes = !inSingleQuotes;
-    }
-    const inQuotes = inDoubleQuotes || inSingleQuotes;
-
-    // Update parenthesis nesting level
-    if (!inQuotes) {
-      if (char === "(") {
-        parenLevel++;
-      } else if (char === ")") {
-        parenLevel--;
-      }
-    }
-
-    if (inQuotes || parenLevel) {
-      if (!started) {
-        started = true;
-        startIndex = i;
-      }
-      continue;
-    }
-
-    // Comment start:
-    if (char === ";" || (char === "*" && !started)) {
-      // Finish any token in progress
-      if (started) {
-        tokens.push(getToken(text.slice(startIndex, i), startIndex, separator));
-      }
-      // Push rest of text as comment and done
-      tokens.push(getToken(text.slice(i), i));
-      return tokens;
-    }
-
-    if (char === "=") {
-      if (started) {
-        tokens.push(getToken(text.slice(startIndex, i), startIndex, separator));
-      }
-      tokens.push(getToken("=", i));
-      started = false;
-      continue;
-    }
-
-    const isSeparator =
-      separators.includes(char) ||
-      (char === "." &&
-        // Don't treat '.' as a separator on the first char - it will be part of a local label
-        startIndex &&
-        // '.' Is only a valid separator for Mnemonic. Ignore once we've found one.
-        !tokens.find((t) => t.type === "Mnemonic"));
-
-    if (isSeparator) {
-      if (started) {
-        // End of token
-        tokens.push(getToken(text.slice(startIndex, i), startIndex, separator));
-        started = false;
-      }
-      separator = char;
-    } else if (!started) {
-      // First non-separator value - start new token
-      started = true;
-      startIndex = i;
-    }
-  }
-
-  // Finish any token in progress
-  if (started) {
-    tokens.push(getToken(text.slice(startIndex), startIndex, separator));
-  }
-
-  return tokens;
-}
-
-/**
- * Map alternate to canonical mnemonics used in our mappings.
- */
-const aliases: Record<string, string> = {
-  // Non-standard mnemonics
-  BLO: Mnemonics.BCS,
-  DBLO: Mnemonics.DBCS,
-  DBRA: Mnemonics.DBF,
-  // Short size => B
-  S: Sizes.B,
-
-  BLK: Directives.DCB,
-};
-
-/**
- * Calculate timing n value from register range used in MOVEM
- */
-export function rangeN(range: string): number {
-  return range.split("/").reduce((acc, v) => {
-    const [from, to] = v.split("-").map((n) => {
-      const t = n[0].toUpperCase();
-      return parseInt(n.substr(1), 10) + (t === "A" ? 8 : 0);
-    });
-    return acc + (to ? to - from + 1 : 1);
-  }, 0);
-}
-
 /**
  * Try to evaluate immediate operand text to a number
  *
@@ -399,8 +243,10 @@ export function evalImmediate(
   val: string,
   vars: Record<string, number> = {}
 ): number | undefined {
+  // Transform ASM expression syntax to be compatible with `expression-eval`
   val = val
-    .replace(/^#/g, "")
+    // Remove immediate prefix
+    .replace(/^#/, "")
     // Hex
     .replace(/\$([0-9a-f]+)/gi, (_, p1) => eval("0x" + p1))
     // Binary
@@ -416,7 +262,7 @@ export function evalImmediate(
     const ast = expEval.parse(val);
     return expEval.eval(ast, vars);
   } catch (e) {
-    // ignore;
+    // ignore
   }
 }
 

@@ -1,9 +1,5 @@
 import fs from "fs";
-import parse, {
-  evalImmediate,
-  lookupAddressingMode,
-  rangeN,
-} from "../src/parse";
+import parse, { evalImmediate, lookupAddressingMode } from "../src/parse";
 import { Mnemonics, AddressingModes, Sizes, Directives } from "../src/syntax";
 
 describe("parse()", () => {
@@ -25,7 +21,7 @@ describe("parse()", () => {
         AddressingModes.AnIndir
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("single operand", () => {
@@ -36,14 +32,14 @@ describe("parse()", () => {
         AddressingModes.Dn
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("unary", () => {
       const [result] = parse("  rts");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.RTS);
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("complex expression", () => {
@@ -59,7 +55,7 @@ describe("parse()", () => {
         AddressingModes.Dn
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("with comment", () => {
@@ -74,7 +70,7 @@ describe("parse()", () => {
         AddressingModes.AnIndir
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("with comment - alt", () => {
@@ -89,7 +85,7 @@ describe("parse()", () => {
         AddressingModes.AnIndir
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("with label", () => {
@@ -104,7 +100,7 @@ describe("parse()", () => {
         AddressingModes.AnIndir
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("with label - local", () => {
@@ -119,7 +115,7 @@ describe("parse()", () => {
         AddressingModes.AnIndir
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("with label - no colon", () => {
@@ -134,7 +130,7 @@ describe("parse()", () => {
         AddressingModes.AnIndir
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("default size", () => {
@@ -148,7 +144,7 @@ describe("parse()", () => {
         AddressingModes.AnIndir
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("case insensitive", () => {
@@ -162,7 +158,7 @@ describe("parse()", () => {
         AddressingModes.AnIndir
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
 
     test("space in parentheses", () => {
@@ -176,7 +172,7 @@ describe("parse()", () => {
         AddressingModes.AnIndir
       );
       expect(result.timings).toBeTruthy();
-      expect(result.words).toBeTruthy();
+      expect(result.bytes).toBeTruthy();
     });
   });
 
@@ -192,7 +188,7 @@ describe("parse()", () => {
       AddressingModes.AnIndir
     );
     expect(result.timings).toBeTruthy();
-    expect(result.words).toBeTruthy();
+    expect(result.bytes).toBeTruthy();
   });
 
   describe("directives", () => {
@@ -236,6 +232,16 @@ foo=4
       const lines = parse(code);
       const n = 4;
       expect(lines[2].timings).toEqual([[6 + 2 * n, 1, 0]]);
+    });
+
+    test("forward ref", () => {
+      const code = `
+      lsl.w #foo,d0
+foo=4
+      `;
+      const lines = parse(code);
+      const n = 4;
+      expect(lines[1].timings).toEqual([[6 + 2 * n, 1, 0]]);
     });
   });
 
@@ -608,28 +614,6 @@ describe("lookupArgType", () => {
 
   test("case insensitive", () => {
     expect(lookupAddressingMode("D0")).toEqual(AddressingModes.Dn);
-  });
-});
-
-describe("rangeCount", () => {
-  test("single range", () => {
-    expect(rangeN("d0-d4")).toEqual(5);
-  });
-
-  test("multiple regs", () => {
-    expect(rangeN("d0/d4/d6")).toEqual(3);
-  });
-
-  test("two ranges", () => {
-    expect(rangeN("d0-d4/a0-a2")).toEqual(8);
-  });
-
-  test("mixed", () => {
-    expect(rangeN("d0-d4/d6/a0-a2/a4")).toEqual(10);
-  });
-
-  test("combined range", () => {
-    expect(rangeN("d0-a6")).toEqual(15);
   });
 });
 

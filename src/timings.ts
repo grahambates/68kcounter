@@ -1,4 +1,4 @@
-import { Instruction, rangeN } from "./parse";
+import { Instruction } from "./parse";
 import { baseTimes, lookupTimes } from "./timingTables";
 import {
   Sizes,
@@ -102,6 +102,19 @@ export function addTimings(a: Timing, b: Timing): Timing {
  */
 export function multiplyTiming(t: Timing, scalar: number): Timing {
   return [t[0] * scalar, t[1] * scalar, t[2] * scalar];
+}
+
+/**
+ * Calculate timing n value from register range used in MOVEM
+ */
+export function rangeN(range: string): number {
+  return range.split("/").reduce((acc, v) => {
+    const [from, to] = v.split("-").map((n) => {
+      const t = n[0].toUpperCase();
+      return parseInt(n.substr(1), 10) + (t === "A" ? 8 : 0);
+    });
+    return acc + (to ? to - from + 1 : 1);
+  }, 0);
 }
 
 /**
