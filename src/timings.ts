@@ -57,6 +57,38 @@ export function instructionTimings(
       } else {
         calculation.n = 63; // Maximum value for register
       }
+    } else if (mnemonic.value === Mnemonics.MULU) {
+      // n = the number of ones in the <ea>
+      const value = operands[0].value;
+      if (
+        operands[0].addressingMode === AddressingModes.Imm &&
+        value !== undefined
+      ) {
+        calculation.n = 0;
+        for (let i = 0; i < 16; i++) {
+          if (value & (1 << i)) {
+            calculation.n++;
+          }
+        }
+      } else {
+        calculation.n = 16; // max value
+      }
+    } else if (mnemonic.value === Mnemonics.MULS) {
+      // n = concatenate the <ea> with a zero as the LSB;
+      // n is the resultant number of 10 or 01 patterns in the 17-bit source;
+      // i.e. worst case happens when the source is $5555
+      const value = operands[0].value;
+      if (
+        operands[0].addressingMode === AddressingModes.Imm &&
+        value !== undefined
+      ) {
+        const binStr = "0" + (value << 1).toString(2);
+        calculation.n =
+          (binStr.match(/10/g)?.length ?? 0) +
+          (binStr.match(/01/g)?.length ?? 0);
+      } else {
+        calculation.n = 16; // max value
+      }
     } else if (mnemonic.value === Mnemonics.MOVEM) {
       const operand = operands.find(
         (o) => o.addressingMode === AddressingModes.RegList

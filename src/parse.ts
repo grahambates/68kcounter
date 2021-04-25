@@ -8,6 +8,7 @@ import {
   Directive as DirectiveName,
   mnemonicGroups,
   Qualifier,
+  Mnemonics,
 } from "./syntax";
 import {
   DirectiveToken,
@@ -139,7 +140,9 @@ export default function parse(input: string): Line[] {
         // Evaluate immediate values where required for timing calculations:
         if (
           operands[0]?.value === undefined &&
-          mnemonicGroups.SHIFT.includes(mnemonic.value)
+          (mnemonicGroups.SHIFT.includes(mnemonic.value) ||
+            mnemonic.value === Mnemonics.MULS ||
+            mnemonic.value === Mnemonics.MULU)
         ) {
           const mode = operands[0].addressingMode;
           if (mode === AddressingModes.Imm) {

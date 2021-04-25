@@ -353,6 +353,26 @@ foo=4
       expect(result.timings).toEqual([[10, 2, 0]]);
     });
 
+    test("mulu best case", () => {
+      const [result] = parse(" mulu #0,d0");
+      expect(result.timings).toEqual([[42, 2, 0]]);
+    });
+
+    test("mulu worst case", () => {
+      const [result] = parse(" mulu #$ffff,d0");
+      expect(result.timings).toEqual([[74, 2, 0]]);
+    });
+
+    test("muls best case", () => {
+      const [result] = parse(" muls #0,d0");
+      expect(result.timings).toEqual([[42, 2, 0]]);
+    });
+
+    test("muls worst case", () => {
+      const [result] = parse(" muls #$5555,d0");
+      expect(result.timings).toEqual([[74, 2, 0]]);
+    });
+
     test("nop", () => {
       const [result] = parse(" nop");
       expect(result.timings).toEqual([[4, 1, 0]]);
