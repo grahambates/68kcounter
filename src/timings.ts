@@ -30,7 +30,8 @@ export interface Calculation {
   base: Timing[];
   ea?: Timing;
   multiplier?: Timing;
-  n?: number;
+  /** Known number or range */
+  n?: number | [number, number];
 }
 
 /**
@@ -53,9 +54,14 @@ export function instructionTimings(
     if (mnemonicGroups.SHIFT.includes(mnemonic.value)) {
       const mode = operands[0].addressingMode;
       if (mode === AddressingModes.Imm) {
-        calculation.n = operands[0].value || 8; // Default to maximum for immediate
+        if (operands[0].value !== undefined) {
+          calculation.n = operands[0].value;
+        } else {
+          calculation.n = [1, 8];
+        }
       } else {
-        calculation.n = 63; // Maximum value for register
+        // Range for register
+        calculation.n = [0, 63];
       }
     } else if (mnemonic.value === Mnemonics.MULU) {
       // n = the number of ones in the <ea>
@@ -71,7 +77,7 @@ export function instructionTimings(
           }
         }
       } else {
-        calculation.n = 16; // max value
+        calculation.n = [0, 16];
       }
     } else if (mnemonic.value === Mnemonics.MULS) {
       // n = concatenate the <ea> with a zero as the LSB;
@@ -87,7 +93,7 @@ export function instructionTimings(
           (binStr.match(/10/g)?.length ?? 0) +
           (binStr.match(/01/g)?.length ?? 0);
       } else {
-        calculation.n = 16; // max value
+        calculation.n = [0, 16];
       }
     } else if (mnemonic.value === Mnemonics.MOVEM) {
       const operand = operands.find(
@@ -97,9 +103,16 @@ export function instructionTimings(
     }
 
     if (calculation.n) {
-      const m = multiplyTiming(calculation.multiplier, calculation.n);
-      for (const i in timings) {
-        timings[i] = addTimings(timings[i], m);
+      if (Array.isArray(calculation.n)) {
+        for (const i in calculation.n) {
+          const m = multiplyTiming(calculation.multiplier, calculation.n[i]);
+          timings[i] = addTimings(calculation.base[0], m);
+        }
+      } else {
+        const m = multiplyTiming(calculation.multiplier, calculation.n);
+        for (const i in timings) {
+          timings[i] = addTimings(timings[i], m);
+        }
       }
     }
   }

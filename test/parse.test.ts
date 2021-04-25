@@ -330,10 +330,14 @@ foo=4
       expect(result.timings).toEqual([[6 + 2 * n, 1, 0]]);
     });
 
-    test("shift n multiplier", () => {
+    test("shift n multiplier unresolved", () => {
       const [result] = parse(" lsl.w #unresolved,d0");
-      const n = 8;
-      expect(result.timings).toEqual([[6 + 2 * n, 1, 0]]);
+      const minN = 1;
+      const maxN = 8;
+      expect(result.timings).toEqual([
+        [6 + 2 * minN, 1, 0],
+        [6 + 2 * maxN, 1, 0],
+      ]);
     });
 
     test("shift n multiplier - single", () => {
@@ -344,8 +348,12 @@ foo=4
 
     test("shift n multiplier - register", () => {
       const [result] = parse(" lsl.w d0,d1");
-      const n = 63;
-      expect(result.timings).toEqual([[6 + 2 * n, 1, 0]]);
+      const minN = 0;
+      const maxN = 63;
+      expect(result.timings).toEqual([
+        [6 + 2 * minN, 1, 0],
+        [6 + 2 * maxN, 1, 0],
+      ]);
     });
 
     test("btst register -> immediate", () => {
@@ -371,6 +379,14 @@ foo=4
     test("muls worst case", () => {
       const [result] = parse(" muls #$5555,d0");
       expect(result.timings).toEqual([[74, 2, 0]]);
+    });
+
+    test("muls range", () => {
+      const [result] = parse(" muls d0,d1");
+      expect(result.timings).toEqual([
+        [38, 1, 0],
+        [70, 1, 0],
+      ]);
     });
 
     test("nop", () => {
