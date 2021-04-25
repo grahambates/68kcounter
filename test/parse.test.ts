@@ -1,6 +1,11 @@
 import fs from "fs";
-import parse, { evalImmediate, lookupAddressingMode } from "../src/parse";
-import { Mnemonics, AddressingModes, Sizes, Directives } from "../src/syntax";
+import parse, { evalImmediate } from "../src/parse";
+import {
+  Mnemonics,
+  AddressingModes,
+  Qualifiers,
+  Directives,
+} from "../src/syntax";
 
 describe("parse()", () => {
   test("parse file", () => {
@@ -13,7 +18,7 @@ describe("parse()", () => {
     test("two operands", () => {
       const [result] = parse("  move.w d0,(a0) ; foo");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -27,7 +32,7 @@ describe("parse()", () => {
     test("single operand", () => {
       const [result] = parse("  ext.w d0");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.EXT);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -47,7 +52,7 @@ describe("parse()", () => {
         "foo:   move.w      #(CopperE-Copper)/4-1,d0;foo bar baz"
       );
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Imm
       );
@@ -62,7 +67,7 @@ describe("parse()", () => {
       const [result] = parse("   move.w     d0,(a0);foo bar baz");
       expect(result.comment.text).toEqual(";foo bar baz");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -77,7 +82,7 @@ describe("parse()", () => {
       const [result] = parse("   move.w     d0,(a0) *foo bar baz");
       expect(result.comment.text).toEqual("*foo bar baz");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -92,7 +97,7 @@ describe("parse()", () => {
       const [result] = parse("foo:   move.w     d0,(a0)");
       expect(result.label.text).toEqual("foo");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -107,7 +112,7 @@ describe("parse()", () => {
       const [result] = parse(".foo:   move.w     d0,(a0)");
       expect(result.label.text).toEqual(".foo");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -122,7 +127,7 @@ describe("parse()", () => {
       const [result] = parse("foo   move.w     d0,(a0)");
       expect(result.label.text).toEqual("foo");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -133,10 +138,10 @@ describe("parse()", () => {
       expect(result.bytes).toBeTruthy();
     });
 
-    test("default size", () => {
+    test("default qualifier", () => {
       const [result] = parse("  MOVE D0,(A0)");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size).toBeFalsy();
+      expect(result.instruction.qualifier).toBeFalsy();
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -150,7 +155,7 @@ describe("parse()", () => {
     test("case insensitive", () => {
       const [result] = parse("  MOVE.W D0,(A0)");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -164,7 +169,7 @@ describe("parse()", () => {
     test("space in parentheses", () => {
       const [result] = parse("  move.w d0,(  a0 )");
       expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-      expect(result.instruction.size.value).toEqual(Sizes.W);
+      expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
       expect(result.instruction.operands[0].addressingMode).toEqual(
         AddressingModes.Dn
       );
@@ -180,7 +185,7 @@ describe("parse()", () => {
     const [result] = parse("a:MOVE.W D0,(A0)");
     expect(result.label.text).toEqual("a");
     expect(result.instruction.mnemonic.value).toEqual(Mnemonics.MOVE);
-    expect(result.instruction.size.value).toEqual(Sizes.W);
+    expect(result.instruction.qualifier.value).toEqual(Qualifiers.W);
     expect(result.instruction.operands[0].addressingMode).toEqual(
       AddressingModes.Dn
     );
@@ -195,28 +200,28 @@ describe("parse()", () => {
     test("assignment EQU", () => {
       const [result] = parse("foo EQU 1");
       expect(result.label.text).toEqual("foo");
-      expect(result.directive.directive.value).toEqual(Directives.EQU);
+      expect(result.directive.name.value).toEqual(Directives.EQU);
       expect(result.directive.args[0].text).toEqual("1");
     });
 
     test("assignment =", () => {
       const [result] = parse("foo = 1");
       expect(result.label.text).toEqual("foo");
-      expect(result.directive.directive.value).toEqual(Directives["="]);
+      expect(result.directive.name.value).toEqual(Directives["="]);
       expect(result.directive.args[0].text).toEqual("1");
     });
 
     test("assignment =", () => {
       const [result] = parse("foo=1");
       expect(result.label.text).toEqual("foo");
-      expect(result.directive.directive.value).toEqual(Directives["="]);
+      expect(result.directive.name.value).toEqual(Directives["="]);
       expect(result.directive.args[0].text).toEqual("1");
     });
 
     test("memory", () => {
       const [result] = parse("a: dc.w 1,2,3");
       expect(result.label.text).toEqual("a");
-      expect(result.directive.directive.value).toEqual(Directives.DC);
+      expect(result.directive.name.value).toEqual(Directives.DC);
       expect(result.directive.args[0].text).toEqual("1");
       expect(result.directive.args[1].text).toEqual("2");
       expect(result.directive.args[2].text).toEqual("3");
@@ -455,165 +460,6 @@ end:
       const result = parse(code);
       expect(result[5].bytes).toEqual(6);
     });
-  });
-});
-
-describe("lookupArgType", () => {
-  test("direct data", () => {
-    expect(lookupAddressingMode("d0")).toEqual(AddressingModes.Dn);
-    expect(lookupAddressingMode("d7")).toEqual(AddressingModes.Dn);
-  });
-
-  test("direct address", () => {
-    expect(lookupAddressingMode("a0")).toEqual(AddressingModes.An);
-    expect(lookupAddressingMode("a7")).toEqual(AddressingModes.An);
-    expect(lookupAddressingMode("sp")).toEqual(AddressingModes.An);
-  });
-
-  test("indirect", () => {
-    expect(lookupAddressingMode("(a0)")).toEqual(AddressingModes.AnIndir);
-    expect(lookupAddressingMode("(  a0  )")).toEqual(AddressingModes.AnIndir);
-    expect(lookupAddressingMode("(a7)")).toEqual(AddressingModes.AnIndir);
-    expect(lookupAddressingMode("(sp)")).toEqual(AddressingModes.AnIndir);
-  });
-
-  test("indirect post increment", () => {
-    expect(lookupAddressingMode("(a0)+")).toEqual(AddressingModes.AnPostInc);
-    expect(lookupAddressingMode("(  a0  )+")).toEqual(
-      AddressingModes.AnPostInc
-    );
-    expect(lookupAddressingMode("(a7)+")).toEqual(AddressingModes.AnPostInc);
-    expect(lookupAddressingMode("(sp)+")).toEqual(AddressingModes.AnPostInc);
-  });
-
-  test("indirect pre decrement", () => {
-    expect(lookupAddressingMode("-(a0)")).toEqual(AddressingModes.AnPreDec);
-    expect(lookupAddressingMode("-(  a0  )")).toEqual(AddressingModes.AnPreDec);
-    expect(lookupAddressingMode("-(a7)")).toEqual(AddressingModes.AnPreDec);
-    expect(lookupAddressingMode("-(sp)")).toEqual(AddressingModes.AnPreDec);
-  });
-
-  test("indirect displacement", () => {
-    expect(lookupAddressingMode("1(a0)")).toEqual(AddressingModes.AnDisp);
-    expect(lookupAddressingMode("example(a0)")).toEqual(AddressingModes.AnDisp);
-  });
-
-  test("indirect displacement - old", () => {
-    expect(lookupAddressingMode("(1,a0)")).toEqual(AddressingModes.AnDisp);
-    expect(lookupAddressingMode("(  1,a0  )")).toEqual(AddressingModes.AnDisp);
-  });
-
-  test("indirect displacement with index", () => {
-    // Dn index
-    expect(lookupAddressingMode("1(a0,d0)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("1(a0,d0.w)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-    expect(lookupAddressingMode("1(a0,d0.l)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-    // An index
-    expect(lookupAddressingMode("1(a0,a0)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("1(a0,a0.w)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-    expect(lookupAddressingMode("1(a0,a0.l)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-
-    // sp
-    expect(lookupAddressingMode("1(sp,sp)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("1(sp,sp.w)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-    expect(lookupAddressingMode("1(sp,sp.l)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-
-    // old style
-    expect(lookupAddressingMode("(1,a0,d0)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("(1,a0,d0.w)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-    expect(lookupAddressingMode("(1,a0,a0)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("(1,a0,a0.w)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-    expect(lookupAddressingMode("(1,sp,sp)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("(1,sp,sp.w)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-
-    // no displacement
-    expect(lookupAddressingMode("(a0,d0)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("(a0,d0.w)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("(a0,a0.w)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("(sp,sp)")).toEqual(AddressingModes.AnDispIx);
-    expect(lookupAddressingMode("(sp,sp.w)")).toEqual(AddressingModes.AnDispIx);
-
-    // whitespace
-    expect(lookupAddressingMode("1( a0,d0 )")).toEqual(
-      AddressingModes.AnDispIx
-    );
-    expect(lookupAddressingMode("(  1,a0,d0  )")).toEqual(
-      AddressingModes.AnDispIx
-    );
-    expect(lookupAddressingMode("( a2,a5.w)")).toEqual(
-      AddressingModes.AnDispIx
-    );
-  });
-
-  test("indirect displacement", () => {
-    expect(lookupAddressingMode("1(pc)")).toEqual(AddressingModes.PcDisp);
-    expect(lookupAddressingMode("(1,pc)")).toEqual(AddressingModes.PcDisp);
-    expect(lookupAddressingMode("(  1,pc  )")).toEqual(AddressingModes.PcDisp);
-  });
-
-  test("indirect displacement with index PC", () => {
-    expect(lookupAddressingMode("1(pc,d0)")).toEqual(AddressingModes.PcDispIx);
-    expect(lookupAddressingMode("1(  pc,d0  )")).toEqual(
-      AddressingModes.PcDispIx
-    );
-    expect(lookupAddressingMode("(  1,pc,d0  )")).toEqual(
-      AddressingModes.PcDispIx
-    );
-  });
-
-  test("immediate", () => {
-    expect(lookupAddressingMode("#123")).toEqual(AddressingModes.Imm);
-    expect(lookupAddressingMode("#$12a")).toEqual(AddressingModes.Imm);
-    expect(lookupAddressingMode("#%01010")).toEqual(AddressingModes.Imm);
-  });
-
-  test("immediate symbol", () => {
-    expect(lookupAddressingMode("#foo")).toEqual(AddressingModes.Imm);
-  });
-
-  test("register list (movem)", () => {
-    expect(lookupAddressingMode("a0-a4")).toEqual(AddressingModes.RegList);
-    expect(lookupAddressingMode("a0/d0")).toEqual(AddressingModes.RegList);
-    expect(lookupAddressingMode("a0-a4/a6/d0-d3/d5/d7")).toEqual(
-      AddressingModes.RegList
-    );
-  });
-
-  test("absolute word", () => {
-    expect(lookupAddressingMode("foo.w")).toEqual(AddressingModes.AbsW);
-    expect(lookupAddressingMode("$12a.w")).toEqual(AddressingModes.AbsW);
-  });
-
-  test("absolute long", () => {
-    expect(lookupAddressingMode("foo.l")).toEqual(AddressingModes.AbsL);
-    expect(lookupAddressingMode("$12a.l")).toEqual(AddressingModes.AbsL);
-  });
-
-  test("absolute long default", () => {
-    expect(lookupAddressingMode("foo")).toEqual(AddressingModes.AbsL);
-    expect(lookupAddressingMode("$12a")).toEqual(AddressingModes.AbsL);
-  });
-
-  test("case insensitive", () => {
-    expect(lookupAddressingMode("D0")).toEqual(AddressingModes.Dn);
   });
 });
 

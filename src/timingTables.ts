@@ -3,19 +3,19 @@ import {
   Mnemonics as M,
   AddressingModes as O,
   addressingModeGroups as OG,
-  Sizes,
+  Qualifiers,
   Mnemonic,
-  Size,
+  Qualifier,
   AddressingMode,
 } from "./syntax";
 import { Timing } from "./timings";
 
 const { BCC, DBCC, SCC, SHIFT } = mnemonicGroups;
-const { B, W, L } = Sizes;
+const { B, W, L } = Qualifiers;
 
 export type TimingTable = [
   Mnemonic[],
-  (Size | null)[],
+  (Qualifier | null)[],
   (AddressingMode | AddressingMode[])[],
   Timing[],
   Timing?

@@ -120,7 +120,7 @@ export function isMnemonic(v: string): v is Mnemonic {
   return Mnemonics[v as Mnemonic] !== undefined;
 }
 
-export const Sizes = {
+export const Qualifiers = {
   B: "B",
   W: "W",
   L: "L",
@@ -130,21 +130,11 @@ export const Sizes = {
   X: "X",
 } as const;
 
-export type Size = Values<typeof Sizes>;
+export type Qualifier = Values<typeof Qualifiers>;
 
-export function isSize(v: string): v is Size {
-  return Sizes[v as Size] !== undefined;
+export function isQualifier(v: string): v is Qualifier {
+  return Qualifiers[v as Qualifier] !== undefined;
 }
-
-export const sizeBytes: Record<Size, number> = {
-  [Sizes.B]: 1,
-  [Sizes.W]: 2,
-  [Sizes.L]: 4,
-  [Sizes.S]: 4,
-  [Sizes.D]: 8,
-  [Sizes.Q]: 8,
-  [Sizes.X]: 12,
-};
 
 export const AddressingModes = {
   Dn: "Dn",

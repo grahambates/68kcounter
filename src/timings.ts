@@ -1,13 +1,13 @@
 import { Instruction } from "./parse";
 import { baseTimes, lookupTimes } from "./timingTables";
 import {
-  Sizes,
+  Qualifiers,
   AddressingMode,
   AddressingModes,
   Mnemonics,
   mnemonicGroups,
 } from "./syntax";
-import instructionSize from "./instructionSize";
+import getQualifier from "./getQualifier";
 
 /**
  * Timing vector:
@@ -123,9 +123,9 @@ export function rangeN(range: string): number {
 function buildKey(instruction: Instruction): string | null {
   const { mnemonic, operands } = instruction;
   let key = mnemonic.value;
-  const size = instructionSize(instruction);
-  if (size) {
-    key += "." + size;
+  const qualifier = getQualifier(instruction);
+  if (qualifier) {
+    key += "." + qualifier;
   }
   if (operands.length) {
     key += " " + operands.map((o) => o.addressingMode).join(",");
@@ -140,14 +140,14 @@ function buildKey(instruction: Instruction): string | null {
 const timingMap = new Map<string, Calculation>();
 
 for (const row of baseTimes) {
-  const [mnemonics, sizes, operands, base, multiplier] = row;
+  const [mnemonics, qualifiers, operands, base, multiplier] = row;
   for (const mnemonic of mnemonics) {
-    for (const size of sizes) {
+    for (const qualifier of qualifiers) {
       let key = String(mnemonic);
-      if (size) {
-        key += "." + size;
+      if (qualifier) {
+        key += "." + qualifier;
       }
-      const eaSize = size === Sizes.L ? 1 : 0;
+      const eaSize = qualifier === Qualifiers.L ? 1 : 0;
       let o: AddressingMode;
 
       if (Array.isArray(operands[0])) {

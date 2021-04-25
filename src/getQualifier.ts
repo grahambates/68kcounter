@@ -4,32 +4,32 @@ import {
   Mnemonic,
   mnemonicGroups,
   Mnemonics,
-  Size,
-  Sizes,
+  Qualifier,
+  Qualifiers,
 } from "./syntax";
 
 /**
- * Gets the size of an instruction, applying defaults where not specified
+ * Gets the size qualifier of an instruction, applying defaults where not specified
  */
-export default function instructionSize({
+export default function getQualifier({
   mnemonic,
-  size,
+  qualifier,
   operands,
-}: Instruction): Size | null {
-  if (size) {
-    return size.value;
+}: Instruction): Qualifier | null {
+  if (qualifier) {
+    return qualifier.value;
   } else if (longDefault.includes(mnemonic.value)) {
-    return Sizes.L;
+    return Qualifiers.L;
   } else if (byteDefault.includes(mnemonic.value)) {
-    return Sizes.B;
+    return Qualifiers.B;
   } else if (bitOps.includes(mnemonic.value)) {
     return operands[1] && operands[1].addressingMode === AddressingModes.Dn
-      ? Sizes.L
-      : Sizes.B;
+      ? Qualifiers.L
+      : Qualifiers.B;
   } else if (unsized.includes(mnemonic.value)) {
     return null;
   }
-  return Sizes.W;
+  return Qualifiers.W;
 }
 
 // Default to word size for instructions apart from these exceptions:

@@ -1,19 +1,27 @@
 import {
   AddressingMode,
+  AddressingModes,
   Directive,
   Directives,
   isDirective,
   isMnemonic,
-  isSize,
+  isQualifier,
   Mnemonic,
   Mnemonics,
-  Size,
-  Sizes,
+  Qualifier,
+  Qualifiers,
 } from "./syntax";
 
 export interface Token {
   text: string;
-  type: string;
+  type:
+    | "Comment"
+    | "Label"
+    | "Mnemonic"
+    | "Qualifier"
+    | "Operand"
+    | "Directive"
+    | "String";
   start: number;
   end: number;
 }
@@ -23,9 +31,9 @@ export interface MnemonicToken extends Token {
   value: Mnemonic;
 }
 
-export interface SizeToken extends Token {
-  type: "Size";
-  value: Size;
+export interface QualifierToken extends Token {
+  type: "Qualifier";
+  value: Qualifier;
 }
 
 export interface OperandToken extends Token {
@@ -39,6 +47,11 @@ export interface DirectiveToken extends Token {
   value: Directive;
 }
 
+export interface StringToken extends Token {
+  type: "String";
+  value: string;
+}
+
 /**
  * Map alternate to canonical mnemonics used in our mappings.
  */
@@ -47,8 +60,8 @@ const aliases: Record<string, string> = {
   BLO: Mnemonics.BCS,
   DBLO: Mnemonics.DBCS,
   DBRA: Mnemonics.DBF,
-  // Short size => B
-  S: Sizes.B,
+  // Short qualifier => B
+  S: Qualifiers.B,
 
   BLK: Directives.DCB,
 };
@@ -155,29 +168,138 @@ function getToken(text: string, start: number, separator = ""): Token {
     normalized = aliases[normalized];
   }
 
-  // Identify know token types
+  // Comment
   if (text[0] === ";" || text[0] === "*") {
     return { type: "Comment", ...props };
-  } else if (start === 0) {
+  }
+
+  // Label
+  if (start === 0) {
     return { type: "Label", ...props };
-  } else if (isMnemonic(normalized)) {
+  }
+
+  // Mnemonic
+  if (isMnemonic(normalized)) {
     const token: MnemonicToken = {
       type: "Mnemonic",
       value: normalized,
       ...props,
     };
     return token;
-  } else if (isDirective(normalized)) {
+  }
+
+  // Directive
+  if (isDirective(normalized)) {
     const token: DirectiveToken = {
       type: "Directive",
       value: normalized,
       ...props,
     };
     return token;
-  } else if (separator === "." && isSize(normalized)) {
-    const token: SizeToken = { type: "Size", value: normalized, ...props };
+  }
+
+  // Qualifier
+  if (separator === "." && isQualifier(normalized)) {
+    const token: QualifierToken = {
+      type: "Qualifier",
+      value: normalized,
+      ...props,
+    };
     return token;
   }
 
-  return { type: "Unknown", ...props };
+  // String
+  if (
+    (text[0] === "'" && text[text.length - 1] === "'") ||
+    (text[0] === '"' && text[text.length - 1] === '"')
+  ) {
+    const token: StringToken = {
+      type: "String",
+      value: text.slice(1, text.length - 1),
+      ...props,
+    };
+    return token;
+  }
+
+  // Operand
+  const addressingMode = lookupAddressingMode(text);
+  const token: OperandToken = {
+    type: "Operand",
+    addressingMode,
+    ...props,
+  };
+  return token;
 }
+
+// Common regex components
+const dn = "(d[0-7])";
+const an = "(a[0-7]|sp)";
+const rn = "([ad][0-7]|sp)";
+const pc = "pc";
+const op = "\\(\\s*";
+const cp = "\\s*\\)";
+const comma = "\\s*,\\s*";
+const idx = `${rn}(\\.(w|l))?`;
+
+/**
+ * Look up type of an operand string
+ */
+export function lookupAddressingMode(operand: string): AddressingMode {
+  const match = addressingModePatterns.find((t) => t.exp.exec(operand));
+  return match ? match.type : AddressingModes.AbsL;
+}
+
+/**
+ * Regular expressions to identify operand type from text.
+ */
+const addressingModePatterns: { type: AddressingMode; exp: RegExp }[] = [
+  { type: AddressingModes.Dn, exp: new RegExp(`^${dn}$`, "i") },
+  { type: AddressingModes.An, exp: new RegExp(`^${an}$`, "i") },
+  {
+    type: AddressingModes.AnIndir,
+    exp: new RegExp(`^${op + an + cp}$`, "i"),
+  },
+  {
+    type: AddressingModes.AnPostInc,
+    // (An)+
+    exp: new RegExp(`^${op + an + cp}\\+$`, "i"),
+  },
+  {
+    type: AddressingModes.AnPreDec,
+    // -(An)
+    exp: new RegExp(`^-${op + an + cp}$`, "i"),
+  },
+  {
+    type: AddressingModes.AnDispIx,
+    // An,Idx)
+    exp: new RegExp(an + comma + idx + cp, "i"),
+  },
+  {
+    type: AddressingModes.AnDisp,
+    exp: new RegExp(
+      // d(An) | (d,An)
+      `(\\w${op + an}|${op}\\w+${comma + an + cp}$)`,
+      "i"
+    ),
+  },
+  {
+    type: AddressingModes.PcDispIx,
+    // PC,Idx)
+    exp: new RegExp(pc + comma + idx + cp, "i"),
+  },
+  {
+    type: AddressingModes.PcDisp,
+    exp: new RegExp(
+      // d(PC) | (d,PC)
+      `(\\w${op + pc}|${op}\\w+${comma + pc + cp}$)`,
+      "i"
+    ),
+  },
+  { type: AddressingModes.Imm, exp: /^#./i },
+  {
+    type: AddressingModes.RegList,
+    // Rn[/-]Rn
+    exp: new RegExp(`${rn}[\\/-]${rn}`, "i"),
+  },
+  { type: AddressingModes.AbsW, exp: /\.W$/i },
+];

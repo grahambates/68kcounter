@@ -5,7 +5,7 @@ import {
   Mnemonic,
   AddressingModes,
   AddressingMode,
-  Sizes,
+  Qualifiers,
 } from "./syntax";
 
 const bitOps: Mnemonic[] = [Mnemonics.BCHG, Mnemonics.BCLR, Mnemonics.BTST];
@@ -34,11 +34,11 @@ const dispTypes: AddressingMode[] = [
  * Get word length of instruction
  */
 export default function instructionLength(instruction: Instruction): number {
-  const { mnemonic, size, operands } = instruction;
+  const { mnemonic, qualifier: size, operands } = instruction;
 
   // Bcc.W is 2 words
   if (branchOps.includes(mnemonic.value)) {
-    return size && size.value === Sizes.B ? 1 : 2;
+    return size && size.value === Qualifiers.B ? 1 : 2;
   }
   // These instructions are always 2 words
   if (doubles.includes(mnemonic.value)) {
@@ -71,7 +71,7 @@ export default function instructionLength(instruction: Instruction): number {
       if (bitOps.includes(mnemonic.value)) {
         words += 1;
       } else {
-        words += size && size.value === Sizes.L ? 2 : 1;
+        words += size && size.value === Qualifiers.L ? 2 : 1;
       }
     }
   }

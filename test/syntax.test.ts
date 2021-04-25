@@ -1,4 +1,4 @@
-import { isMnemonic, isSize } from "../src/syntax";
+import { isMnemonic, isQualifier } from "../src/syntax";
 
 describe("isMnemonic()", () => {
   test("valid", () => {
@@ -9,11 +9,11 @@ describe("isMnemonic()", () => {
   });
 });
 
-describe("isSize()", () => {
+describe("isQualifier()", () => {
   test("valid", () => {
-    expect(isSize("B")).toBeTruthy();
-    expect(isSize("W")).toBeTruthy();
-    expect(isSize("L")).toBeTruthy();
+    expect(isQualifier("B")).toBeTruthy();
+    expect(isQualifier("W")).toBeTruthy();
+    expect(isQualifier("L")).toBeTruthy();
   });
   test("invalid", () => {
     expect(isMnemonic("X")).toBeFalsy();

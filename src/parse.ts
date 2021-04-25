@@ -3,18 +3,17 @@ import { Calculation, instructionTimings, Timing } from "./timings";
 import instructionLength from "./instructionLength";
 import {
   AddressingModes,
-  AddressingMode,
-  Sizes,
+  Qualifiers,
   Directives,
-  Directive,
+  Directive as DirectiveName,
   mnemonicGroups,
-  sizeBytes,
+  Qualifier,
 } from "./syntax";
 import {
   DirectiveToken,
   MnemonicToken,
   OperandToken,
-  SizeToken,
+  QualifierToken,
   Token,
   tokenize,
 } from "./tokens";
@@ -25,11 +24,7 @@ export interface Line {
   comment?: Token;
 
   instruction?: Instruction;
-  directive?: {
-    directive: DirectiveToken;
-    size?: SizeToken;
-    args?: Token[];
-  };
+  directive?: Directive;
 
   timings?: Timing[] | null;
   calculation?: Calculation;
@@ -38,11 +33,17 @@ export interface Line {
 
 export interface Instruction {
   mnemonic: MnemonicToken;
-  size?: SizeToken;
+  qualifier?: QualifierToken;
   operands: OperandToken[];
 }
 
-const assignments: Directive[] = [
+export interface Directive {
+  name: DirectiveToken;
+  qualifier?: QualifierToken;
+  args?: Token[];
+}
+
+const assignments: DirectiveName[] = [
   Directives["="],
   Directives.EQU,
   Directives.FEQU,
@@ -80,7 +81,7 @@ export default function parse(input: string): Line[] {
       }
 
       if (line.directive) {
-        const { directive, size, args } = line.directive;
+        const { name: directive, qualifier, args } = line.directive;
 
         // Variable Assignment:
         if (
@@ -100,11 +101,11 @@ export default function parse(input: string): Line[] {
         // Get size of memory blocks:
         if (!line.bytes) {
           // DC:
-          if (directive.value === Directives.DC && size && args) {
-            if (size.value === Sizes.B) {
+          if (directive.value === Directives.DC && qualifier && args) {
+            if (qualifier.value === Qualifiers.B) {
               line.bytes = byteCount(args);
             } else {
-              line.bytes = args.length * sizeBytes[size.value];
+              line.bytes = args.length * qualifierBytes[qualifier.value];
             }
           } else if (directive.value === Directives.DB && args) {
             line.bytes = byteCount(args);
@@ -118,13 +119,13 @@ export default function parse(input: string): Line[] {
           else if (
             (directive.value === Directives.DCB ||
               directive.value === Directives.DS) &&
-            size &&
+            qualifier &&
             args &&
             args[0]
           ) {
             const n = evalImmediate(args[0].text, vars);
             if (n) {
-              const bytes = sizeBytes[size.value];
+              const bytes = qualifierBytes[qualifier.value];
               line.bytes = bytes * n;
             }
           }
@@ -182,39 +183,47 @@ export function parseLine(text: string): Line {
   line.comment = tokens.find((t) => t.type === "Comment");
   line.label = tokens.find((t) => t.type === "Label");
 
-  // Check if instruction:
-  const mnemonic = tokens.find((t) => t.type === "Mnemonic") as MnemonicToken;
-  const size = tokens.find((t) => t.type === "Size") as SizeToken;
-  if (mnemonic) {
-    const operands = tokens
-      .filter((t) => t.type === "Unknown")
-      .map((t) => {
-        const token: OperandToken = {
-          ...t,
-          type: "Operand",
-          addressingMode: lookupAddressingMode(t.text),
-        };
-        return token;
-      });
+  const qualifier = tokens.find(
+    (t) => t.type === "Qualifier"
+  ) as QualifierToken;
 
-    line.instruction = { mnemonic, size, operands };
+  // Instruction:
+  const mnemonic = tokens.find((t) => t.type === "Mnemonic") as MnemonicToken;
+  if (mnemonic) {
+    const operands = tokens.filter(
+      (t) => t.type === "Operand"
+    ) as OperandToken[];
+    line.instruction = { mnemonic, qualifier, operands };
     return line;
   }
 
+  // Directive:
   const directive = tokens.find(
     (t) => t.type === "Directive"
   ) as DirectiveToken;
   if (directive) {
-    const args = tokens.filter((t) => t.type === "Unknown");
+    const args = tokens.filter((t) =>
+      ["Operand", "String", "Unknown"].includes(t.type)
+    );
     line.directive = {
-      directive,
-      size,
+      name: directive,
+      qualifier,
       args,
     };
   }
 
   return line;
 }
+
+const qualifierBytes: Record<Qualifier, number> = {
+  [Qualifiers.B]: 1,
+  [Qualifiers.W]: 2,
+  [Qualifiers.L]: 4,
+  [Qualifiers.S]: 4,
+  [Qualifiers.D]: 8,
+  [Qualifiers.Q]: 8,
+  [Qualifiers.X]: 12,
+};
 
 /**
  * Get byte count for a list of args on dc.b / db
@@ -265,76 +274,3 @@ export function evalImmediate(
     // ignore
   }
 }
-
-/**
- * Look up type of an operand string
- */
-export function lookupAddressingMode(operand: string): AddressingMode {
-  const match = addressingModePatterns.find((t) => t.exp.exec(operand));
-  return match ? match.type : AddressingModes.AbsL;
-}
-
-// Common regex components
-const dn = "(d[0-7])";
-const an = "(a[0-7]|sp)";
-const rn = "([ad][0-7]|sp)";
-const pc = "pc";
-const op = "\\(\\s*";
-const cp = "\\s*\\)";
-const comma = "\\s*,\\s*";
-const idx = `${rn}(\\.(w|l))?`;
-
-/**
- * Regular expressions to identify operand type from text.
- */
-const addressingModePatterns: { type: AddressingMode; exp: RegExp }[] = [
-  { type: AddressingModes.Dn, exp: new RegExp(`^${dn}$`, "i") },
-  { type: AddressingModes.An, exp: new RegExp(`^${an}$`, "i") },
-  {
-    type: AddressingModes.AnIndir,
-    exp: new RegExp(`^${op + an + cp}$`, "i"),
-  },
-  {
-    type: AddressingModes.AnPostInc,
-    // (An)+
-    exp: new RegExp(`^${op + an + cp}\\+$`, "i"),
-  },
-  {
-    type: AddressingModes.AnPreDec,
-    // -(An)
-    exp: new RegExp(`^-${op + an + cp}$`, "i"),
-  },
-  {
-    type: AddressingModes.AnDispIx,
-    // An,Idx)
-    exp: new RegExp(an + comma + idx + cp, "i"),
-  },
-  {
-    type: AddressingModes.AnDisp,
-    exp: new RegExp(
-      // d(An) | (d,An)
-      `(\\w${op + an}|${op}\\w+${comma + an + cp}$)`,
-      "i"
-    ),
-  },
-  {
-    type: AddressingModes.PcDispIx,
-    // PC,Idx)
-    exp: new RegExp(pc + comma + idx + cp, "i"),
-  },
-  {
-    type: AddressingModes.PcDisp,
-    exp: new RegExp(
-      // d(PC) | (d,PC)
-      `(\\w${op + pc}|${op}\\w+${comma + pc + cp}$)`,
-      "i"
-    ),
-  },
-  { type: AddressingModes.Imm, exp: /^#./i },
-  {
-    type: AddressingModes.RegList,
-    // Rn[/-]Rn
-    exp: new RegExp(`${rn}[\\/-]${rn}`, "i"),
-  },
-  { type: AddressingModes.AbsW, exp: /\.W$/i },
-];
