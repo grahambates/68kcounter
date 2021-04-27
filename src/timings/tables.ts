@@ -7,8 +7,8 @@ import {
   Mnemonic,
   Qualifier,
   AddressingMode,
-} from "./syntax";
-import { Timing } from "./timings";
+} from "../syntax";
+import { Timing } from ".";
 
 const { BCC, DBCC, SCC, SHIFT } = mnemonicGroups;
 const { B, W, L } = Qualifiers;

@@ -1,4 +1,3 @@
-import { Instruction } from "./parse";
 import {
   AddressingModes,
   Mnemonic,
@@ -6,27 +5,27 @@ import {
   Mnemonics,
   Qualifier,
   Qualifiers,
-} from "./syntax";
+} from "../syntax";
+import { InstructionStatement } from "./nodes";
 
 /**
  * Gets the size qualifier of an instruction, applying defaults where not specified
  */
-export default function getQualifier({
-  mnemonic,
-  qualifier,
+export default function instructionQualifier({
+  opcode: { op, qualifier },
   operands,
-}: Instruction): Qualifier | null {
+}: InstructionStatement): Qualifier | null {
   if (qualifier) {
-    return qualifier.value;
-  } else if (longDefault.includes(mnemonic.value)) {
+    return qualifier.name;
+  } else if (longDefault.includes(op.name)) {
     return Qualifiers.L;
-  } else if (byteDefault.includes(mnemonic.value)) {
+  } else if (byteDefault.includes(op.name)) {
     return Qualifiers.B;
-  } else if (bitOps.includes(mnemonic.value)) {
-    return operands[1] && operands[1].addressingMode === AddressingModes.Dn
+  } else if (bitOps.includes(op.name)) {
+    return operands[1] && operands[1].mode === AddressingModes.Dn
       ? Qualifiers.L
       : Qualifiers.B;
-  } else if (unsized.includes(mnemonic.value)) {
+  } else if (unsized.includes(op.name)) {
     return null;
   }
   return Qualifiers.W;

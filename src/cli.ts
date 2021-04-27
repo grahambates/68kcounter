@@ -6,7 +6,6 @@ import { argv } from "process";
 import parse, {
   calculateTotals,
   formatTiming,
-  lengthLevel,
   Level,
   Levels,
   timingLevel,
@@ -40,9 +39,9 @@ lines.forEach((l) => {
     annotation += l.timings.map(formatTimingColored).join(" / ");
   }
   if (l.bytes) {
-    annotation += " " + colorWords(l.bytes);
+    annotation += " " + l.bytes;
   }
-  console.log(pad(annotation, 30) + " | " + l.text);
+  console.log(pad(annotation, 30) + " | " + l.statement.text);
 });
 
 const totals = calculateTotals(lines);
@@ -58,11 +57,6 @@ function formatTimingColored(timing: Timing) {
   const output = formatTiming(timing);
   const level = timingLevel(timing);
   return chalk[levelToColor[level]](output);
-}
-
-function colorWords(words: number) {
-  const level = lengthLevel(words);
-  return chalk[levelToColor[level]](words);
 }
 
 /**

@@ -362,3 +362,14 @@ export type Directive = Values<typeof Directives>;
 export function isDirective(v: string): v is Directive {
   return Directives[v as Directive] !== undefined;
 }
+
+/**
+ * Map alternate to canonical mnemonics used in our mappings.
+ */
+export const aliases: Record<string, string> = {
+  // Non-standard mnemonics
+  BLO: Mnemonics.BCS,
+  DBLO: Mnemonics.DBCS,
+  DBRA: Mnemonics.DBF,
+  BLK: Directives.DCB,
+};

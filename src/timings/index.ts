@@ -1,13 +1,14 @@
-import { Instruction } from "./parse";
-import { baseTimes, lookupTimes } from "./timingTables";
+import { baseTimes, lookupTimes } from "./tables";
 import {
   Qualifiers,
   AddressingMode,
   AddressingModes,
   Mnemonics,
   mnemonicGroups,
-} from "./syntax";
-import getQualifier from "./getQualifier";
+} from "../syntax";
+import instructionQualifier from "../parse/instructionQualifier";
+import { EffectiveAddressNode, InstructionStatement } from "../parse/nodes";
+import evaluate, { Variables } from "../parse/evaluate";
 
 /**
  * Timing vector:
@@ -35,41 +36,41 @@ export interface Calculation {
 }
 
 /**
- * Look up timing information for a parsed instruction
+ * Look up timing information for a parsed instruction statement
  */
 export function instructionTimings(
-  instruction: Instruction
+  statement: InstructionStatement,
+  vars: Variables
 ): InstructionTiming | null {
-  const key = buildKey(instruction);
+  const key = buildKey(statement);
   if (!key || !timingMap.has(key)) {
     return null;
   }
   const calculation = { ...(timingMap.get(key) as Calculation) };
   const timings: Timing[] = [...calculation.base];
 
-  // Apply n multiplier
-  if (calculation.multiplier) {
-    const { mnemonic, operands } = instruction;
+  const {
+    opcode: { op },
+    operands,
+  } = statement;
+  const source = operands[0];
 
-    if (mnemonicGroups.SHIFT.includes(mnemonic.value)) {
-      const mode = operands[0].addressingMode;
-      if (mode === AddressingModes.Imm) {
-        if (operands[0].value !== undefined) {
-          calculation.n = operands[0].value;
-        } else {
-          calculation.n = [1, 8];
-        }
+  // Calculate n multiplier:
+  if (calculation.multiplier) {
+    // Shift
+    if (mnemonicGroups.SHIFT.includes(op.name)) {
+      if (source.mode === AddressingModes.Imm) {
+        calculation.n = evaluate(source.text, vars) || [1, 8];
       } else {
         // Range for register
         calculation.n = [0, 63];
       }
-    } else if (mnemonic.value === Mnemonics.MULU) {
+    }
+    // MULU
+    else if (op.name === Mnemonics.MULU) {
       // n = the number of ones in the <ea>
-      const value = operands[0].value;
-      if (
-        operands[0].addressingMode === AddressingModes.Imm &&
-        value !== undefined
-      ) {
+      const value = evaluate(source.text, vars);
+      if (source.mode === AddressingModes.Imm && value !== undefined) {
         calculation.n = 0;
         for (let i = 0; i < 16; i++) {
           if (value & (1 << i)) {
@@ -79,15 +80,14 @@ export function instructionTimings(
       } else {
         calculation.n = [0, 16];
       }
-    } else if (mnemonic.value === Mnemonics.MULS) {
+    }
+    // MULS
+    else if (op.name === Mnemonics.MULS) {
       // n = concatenate the <ea> with a zero as the LSB;
       // n is the resultant number of 10 or 01 patterns in the 17-bit source;
       // i.e. worst case happens when the source is $5555
-      const value = operands[0].value;
-      if (
-        operands[0].addressingMode === AddressingModes.Imm &&
-        value !== undefined
-      ) {
+      const value = evaluate(source.text, vars);
+      if (source.mode === AddressingModes.Imm && value !== undefined) {
         const binStr = "0" + (value << 1).toString(2);
         calculation.n =
           (binStr.match(/10/g)?.length ?? 0) +
@@ -95,20 +95,24 @@ export function instructionTimings(
       } else {
         calculation.n = [0, 16];
       }
-    } else if (mnemonic.value === Mnemonics.MOVEM) {
-      const operand = operands.find(
-        (o) => o.addressingMode === AddressingModes.RegList
-      );
+    }
+    // MOVEM
+    else if (op.name === Mnemonics.MOVEM) {
+      const operand = operands.find((o) => o.mode === AddressingModes.RegList);
       calculation.n = operand && rangeN(operand.text);
     }
 
+    // Apply multiplier:
     if (calculation.n) {
+      // Range
       if (Array.isArray(calculation.n)) {
         for (const i in calculation.n) {
           const m = multiplyTiming(calculation.multiplier, calculation.n[i]);
           timings[i] = addTimings(calculation.base[0], m);
         }
-      } else {
+      }
+      // Single value
+      else {
         const m = multiplyTiming(calculation.multiplier, calculation.n);
         for (const i in timings) {
           timings[i] = addTimings(timings[i], m);
@@ -165,15 +169,19 @@ export function rangeN(range: string): number {
 /**
  * Build string key for map lookup
  */
-function buildKey(instruction: Instruction): string | null {
-  const { mnemonic, operands } = instruction;
-  let key = mnemonic.value;
-  const qualifier = getQualifier(instruction);
+function buildKey(statement: InstructionStatement): string | null {
+  const { opcode, operands } = statement;
+  if (!opcode) {
+    return null;
+  }
+  let key = opcode.op.name;
+  const qualifier = instructionQualifier(statement);
   if (qualifier) {
     key += "." + qualifier;
   }
   if (operands.length) {
-    key += " " + operands.map((o) => o.addressingMode).join(",");
+    key +=
+      " " + (operands as EffectiveAddressNode[]).map((o) => o.mode).join(",");
   }
   return key;
 }

@@ -1,4 +1,4 @@
-![Output window screenshot](images/icon.png)
+![Logo](images/icon.png)
 
 # 68k Counter
 
