@@ -2,12 +2,10 @@ import {
   AddressingMode,
   aliases,
   Directive,
-  Directives,
   isDirective,
   isMnemonic,
   isQualifier,
   Mnemonic,
-  Mnemonics,
   Qualifier,
   Qualifiers,
 } from "../syntax";
@@ -37,11 +35,13 @@ export interface Location {
 export class LabelNode extends Node {
   name: string;
   local: boolean;
+  macro: boolean;
 
   constructor(start: number, text: string) {
     super(start, text, "Label");
     this.name = text;
     this.local = text.indexOf(".") === 0;
+    this.macro = text.includes("@");
   }
 }
 
@@ -121,6 +121,20 @@ export class StringNode extends Node {
   }
 }
 
+export class MacroArgNode extends Node {
+  index: number;
+  constructor(start: number, text: string) {
+    super(start, text, "MacroArg");
+    this.index = parseInt(text.substring(1), 10);
+  }
+}
+
+export class MacroInvocationsNode extends Node {
+  constructor(start: number, text: string) {
+    super(start, text, "MacroInvocations");
+  }
+}
+
 export class CommentNode extends Node {
   constructor(start: number, text: string) {
     super(start, text, "Comment");
@@ -150,11 +164,19 @@ export class StatementNode extends Node {
         // Operands
         if (["'", '"'].includes(text[0])) {
           this.operands.push(new StringNode(start, text));
+        } else if (text === "\\@") {
+          this.operands.push(new MacroInvocationsNode(start, text));
+        } else if (text[0] === "\\") {
+          this.operands.push(new MacroArgNode(start, text));
         } else {
           this.operands.push(new EffectiveAddressNode(start, text));
         }
       }
     }
+  }
+
+  isLabel(): this is LabelStatement {
+    return !this.opcode && this.label !== undefined;
   }
 
   isInstruction(): this is InstructionStatement {
@@ -163,6 +185,10 @@ export class StatementNode extends Node {
 
   isDirective(): this is DirectiveStatement {
     return this.opcode !== undefined && this.opcode.op instanceof DirectiveNode;
+  }
+
+  isMacro(): this is MacroStatement {
+    return this.opcode !== undefined && this.opcode.op instanceof MacroNode;
   }
 }
 
@@ -180,4 +206,15 @@ export interface DirectiveStatement {
     qualifier?: QualifierNode;
   };
   operands: Node[];
+}
+
+export interface MacroStatement {
+  opcode: {
+    op: MacroNode;
+  };
+  operands: Node[];
+}
+
+export interface LabelStatement {
+  label: LabelNode;
 }

@@ -326,6 +326,7 @@ export const Directives = {
   LLEN: "LLEN",
   LOAD: "LOAD",
   MACHINE: "MACHINE",
+  MACRO: "MACRO",
   MEXIT: "MEXIT",
   MMU: "MMU",
   NOLIST: "NOLIST",

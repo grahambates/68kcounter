@@ -242,6 +242,50 @@ describe("parse()", () => {
       ).toEqual("2");
       expect(result.statement.operands[2].text).toEqual("3");
     });
+
+    test("macro definition", () => {
+      const [result] = parse("a: macro");
+      expect(result.statement.label.text).toEqual("a");
+      expect(result.statement.opcode.op.name).toEqual(Directives.MACRO);
+    });
+
+    test("macro invocation", () => {
+      const lines = parse(`
+a:    macro
+      move.w \\1,\\2
+      endm
+      a d0,(a0)`);
+      expect(lines[4].macroLines).toHaveLength(1);
+      expect(lines[4].bytes).toEqual(2);
+      expect(lines[4].timings).toEqual([[8, 1, 1]]);
+    });
+
+    test("rept", () => {
+      const lines = parse(`
+      rept 4
+      move.w d0,(a0)
+      endr`);
+      expect(lines[3].macroLines).toHaveLength(4);
+      expect(lines[3].bytes).toEqual(2 * 4);
+      expect(lines[3].timings).toEqual([[8 * 4, 4, 4]]);
+    });
+
+    test("bss section", () => {
+      const lines = parse(`
+a: ds.w 1
+      BSS
+b: ds.w 1
+      DATA
+c: ds.w 1
+      SECTION "foo",BSS
+d: ds.w 1
+
+`);
+      expect(lines[1].bss).toBe(false);
+      expect(lines[3].bss).toBe(true);
+      expect(lines[5].bss).toBe(false);
+      expect(lines[7].bss).toBe(true);
+    });
   });
 
   describe("parse assignments", () => {
