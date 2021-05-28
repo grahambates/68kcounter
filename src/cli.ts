@@ -39,7 +39,7 @@ lines.forEach((l) => {
     annotation += l.timings.map(formatTimingColored).join(" / ");
   }
   if (l.bytes) {
-    annotation += " " + l.bytes;
+    annotation += " " + formatNumber(l.bytes);
   }
   console.log(pad(annotation, 30) + " | " + l.statement.text);
 });
@@ -51,7 +51,11 @@ if (totals.isRange) {
 } else {
   console.log(formatTiming(totals.min));
 }
-console.log(totals.bytes + " bytes");
+console.log(
+  `${formatNumber(totals.bytes)} bytes (${formatNumber(
+    totals.objectBytes
+  )} object, ${formatNumber(totals.bssBytes)} BSS)`
+);
 
 function formatTimingColored(timing: Timing) {
   const output = formatTiming(timing);
@@ -67,4 +71,8 @@ function pad(str: string, l: number) {
   const strClean = str.replace(/(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]/g, "");
   const p = strClean ? l - strClean.length : l;
   return Array(p).fill(" ").join("") + str;
+}
+
+function formatNumber(num: number): string {
+  return num.toLocaleString("en");
 }
