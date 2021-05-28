@@ -466,7 +466,7 @@ export const baseTimes: TimingTable = [
   [ [M.MOVEM],                       [W],       [O.PcDisp, O.RegList],       [[16, 4, 0]],               [4, 1, 0]],
   [ [M.MOVEM],                       [W],       [O.PcDispIx, O.RegList],     [[18, 4, 0]],               [4, 1, 0]],
   [ [M.MOVEM],                       [L],       [O.AnIndir, O.RegList],      [[12, 3, 0]],               [8, 2, 0]],
-  [ [M.MOVEM],                       [L],       [O.AnPostInc, O.RegList],    [[12, 3, 0]],               [8, 1, 0]],
+  [ [M.MOVEM],                       [L],       [O.AnPostInc, O.RegList],    [[12, 3, 0]],               [8, 2, 0]],
   [ [M.MOVEM],                       [L],       [O.AnDisp, O.RegList],       [[16, 4, 0]],               [8, 2, 0]],
   [ [M.MOVEM],                       [L],       [O.AnDispIx, O.RegList],     [[18, 4, 0]],               [8, 2, 0]],
   [ [M.MOVEM],                       [L],       [O.AbsW, O.RegList],         [[16, 4, 0]],               [8, 2, 0]],

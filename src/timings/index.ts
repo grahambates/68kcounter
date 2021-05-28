@@ -213,7 +213,10 @@ for (const row of baseTimes) {
             ea = [8, 1, 0];
           }
           if (
-            (mnemonic === Mnemonics.TAS || mnemonic === Mnemonics.CHK) &&
+            (mnemonic === Mnemonics.TAS ||
+              mnemonic === Mnemonics.CHK ||
+              mnemonic === Mnemonics.MULS ||
+              mnemonic === Mnemonics.MULU) &&
             o === AddressingModes.AbsL
           ) {
             ea = [12, 2, 0];

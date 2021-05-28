@@ -4,6 +4,7 @@
 
 import fs from "fs";
 import parse from "../../src/parse";
+import evaluate from "../../src/parse/evaluate";
 import { Timing } from "../../src/timings";
 
 const instructions = fs
@@ -13,7 +14,10 @@ const instructions = fs
 /**
  * Extract expected timings from line comment
  */
-function parseComment(comment: string): { total: Timing; index: number } {
+function parseComment(
+  comment: string,
+  m?: number
+): { total: Timing; index: number } {
   let index = 0;
   const [timings, caseText] = comment
     .substr(1)
@@ -36,11 +40,11 @@ function parseComment(comment: string): { total: Timing; index: number } {
   }
 
   if (timings.includes("=")) {
-    const total = parseTime(timings.split("=").pop().trim());
+    const total = parseTime(timings.split("=").pop().trim(), m);
     return { total, index };
   } else {
     return {
-      total: parseTime(timings),
+      total: parseTime(timings, m),
       index,
     };
   }
@@ -49,16 +53,16 @@ function parseComment(comment: string): { total: Timing; index: number } {
 /**
  * Convert string formatted timing 'x(y/z)'
  */
-const parseTime = (str: string): Timing =>
+const parseTime = (str: string, m?: number): Timing =>
   str
-    .match(/(\d+)\((\d+)\/(\d+)\)/)
+    .match(/([\d+m]+)\(([\d+m]+)\/([\d+m]+)\)/)
     .slice(1)
-    .map((n) => parseInt(n, 10)) as Timing;
+    .map((n) => evaluate(n.replace(/(\d)m/, "$1*m"), { m })) as Timing;
 
 describe("instruction timings", () => {
   const lines = parse(instructions);
   for (let i = 0; i < lines.length; i++) {
-    const { statement, timings } = lines[i];
+    const { statement, timings, calculation } = lines[i];
     if (
       // Does this look like it should be an instruction?
       // Don't rely on `isInstruction()` as this won't catch unsupported mnemonics
@@ -69,7 +73,10 @@ describe("instruction timings", () => {
     ) {
       test(statement.text, () => {
         expect(statement.isInstruction()).toBeTruthy();
-        const { total, index } = parseComment(statement.comment.text);
+        const m = Array.isArray(calculation.n)
+          ? calculation.n[0]
+          : calculation.n;
+        const { total, index } = parseComment(statement.comment.text, m);
         const idx = Math.min(index, timings.length - 1);
         expect(timings[idx]).toEqual(total);
       });
