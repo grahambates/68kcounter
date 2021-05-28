@@ -29,16 +29,16 @@ export function timingLevel(timing: Timing): Level {
 }
 
 /**
- * Get warning level for word length
+ * Get warning level for byte length
  */
-export function lengthLevel(words: number): Level {
-  if (words > 3) {
+export function lengthLevel(bytes: number): Level {
+  if (bytes > 6) {
     return Levels.VHigh;
   }
-  if (words > 2) {
+  if (bytes > 4) {
     return Levels.High;
   }
-  if (words === 2) {
+  if (bytes === 4) {
     return Levels.Med;
   }
   return Levels.Low;

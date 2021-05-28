@@ -2,22 +2,22 @@ import { lengthLevel, Levels, timingLevel } from "../src/levels";
 
 describe("lengthLevel()", () => {
   test("low", () => {
-    const result = lengthLevel(1);
+    const result = lengthLevel(2);
     expect(result).toEqual(Levels.Low);
   });
 
   test("med", () => {
-    const result = lengthLevel(2);
+    const result = lengthLevel(4);
     expect(result).toEqual(Levels.Med);
   });
 
   test("high", () => {
-    const result = lengthLevel(3);
+    const result = lengthLevel(6);
     expect(result).toEqual(Levels.High);
   });
 
   test("vhigh", () => {
-    const result = lengthLevel(4);
+    const result = lengthLevel(8);
     expect(result).toEqual(Levels.VHigh);
   });
 });
