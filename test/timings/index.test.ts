@@ -1,5 +1,5 @@
 import parse from "../../src/parse";
-import { formatTiming, rangeN } from "../../src/timings";
+import { formatTiming, rangeN, popCount } from "../../src/timings";
 
 describe("timings", () => {
   test("move", () => {
@@ -126,5 +126,11 @@ describe("rangeCount", () => {
 
   test("combined range", () => {
     expect(rangeN("d0-a6")).toEqual(15);
+  });
+
+  test("popCount", () => {
+    expect(popCount(0)).toEqual(0);
+    expect(popCount(0b1101)).toEqual(3);
+    expect(popCount(0x5555)).toEqual(8);
   });
 });

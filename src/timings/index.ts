@@ -35,6 +35,15 @@ export interface Calculation {
   n?: number | [number, number];
 }
 
+export function popCount(x: number): number {
+  x -= (x >> 1) & 0x55555555;
+  x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+  x = (x + (x >> 4)) & 0x0f0f0f0f;
+  x += x >> 8;
+  x += x >> 16;
+  return x & 0x7f;
+}
+
 /**
  * Look up timing information for a parsed instruction statement
  */
@@ -71,12 +80,7 @@ export function instructionTimings(
       // n = the number of ones in the <ea>
       const value = evaluate(source.text, vars);
       if (source.mode === AddressingModes.Imm && value !== undefined) {
-        calculation.n = 0;
-        for (let i = 0; i < 16; i++) {
-          if (value & (1 << i)) {
-            calculation.n++;
-          }
-        }
+        calculation.n = popCount(value);
       } else {
         calculation.n = [0, 16];
       }
@@ -88,10 +92,7 @@ export function instructionTimings(
       // i.e. worst case happens when the source is $5555
       const value = evaluate(source.text, vars);
       if (source.mode === AddressingModes.Imm && value !== undefined) {
-        const binStr = "0" + (value << 1).toString(2);
-        calculation.n =
-          (binStr.match(/10/g)?.length ?? 0) +
-          (binStr.match(/01/g)?.length ?? 0);
+        calculation.n = popCount((value ^ (value << 1)) & 0xffff);
       } else {
         calculation.n = [0, 16];
       }
