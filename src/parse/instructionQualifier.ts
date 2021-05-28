@@ -44,6 +44,7 @@ const unsized: Mnemonic[] = [
   Mnemonics.TRAP,
   Mnemonics.TRAPV,
   Mnemonics.UNLK,
+  Mnemonics.ILLEGAL,
 ];
 const longDefault: Mnemonic[] = [
   Mnemonics.MOVEQ,

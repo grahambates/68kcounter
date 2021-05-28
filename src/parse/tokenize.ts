@@ -44,7 +44,7 @@ export default function tokenize(text: string): Token[] {
     }
 
     // Comment start:
-    if (char === ";" || (char === "*" && !started)) {
+    if (char === ";" || (char === "*" && !started && text[i + 1] !== "+")) {
       // Finish any token in progress
       if (started) {
         tokens.push([startIndex, text.slice(startIndex, i)]);

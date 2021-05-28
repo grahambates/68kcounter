@@ -154,7 +154,7 @@ export class StatementNode extends Node {
 
     for (const i in tokens) {
       const [start, text] = tokens[i];
-      if ([";", "*"].includes(text[0])) {
+      if (text[0] === ";" || (text[0] === "*" && text[1] !== "+")) {
         this.comment = new CommentNode(start, text);
       } else if (start === 0) {
         this.label = new LabelNode(start, text);

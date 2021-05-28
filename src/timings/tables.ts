@@ -96,7 +96,7 @@ export const baseTimes: TimingTable = [
   [ [M.MOVE],                        [B, W],    [O.AnPreDec, O.AnPostInc],   [[14, 2, 1]]                         ],
   [ [M.MOVE],                        [B, W],    [O.AnPreDec, O.AnPreDec],    [[14, 2, 1]]                         ],
   [ [M.MOVE],                        [B, W],    [O.AnPreDec, O.AnDisp],      [[18, 3, 1]]                         ],
-  [ [M.MOVE],                        [B, W],    [O.AnPreDec, O.AnDispIx],    [[20, 4, 1]]                         ],
+  [ [M.MOVE],                        [B, W],    [O.AnPreDec, O.AnDispIx],    [[20, 3, 1]]                         ],
   [ [M.MOVE],                        [B, W],    [O.AnPreDec, O.AbsW],        [[18, 3, 1]]                         ],
   [ [M.MOVE],                        [B, W],    [O.AnPreDec, O.AbsL],        [[22, 4, 1]]                         ],
   //----------------------------------------------------------------------------------------------------------------
@@ -193,7 +193,7 @@ export const baseTimes: TimingTable = [
   [ [M.MOVE],                        [L],       [O.An, O.AbsL],              [[20, 3, 2]]                         ],
   //----------------------------------------------------------------------------------------------------------------
   [ [M.MOVE],                        [L],       [O.AnIndir, O.Dn],           [[12, 3, 0]]                         ],
-  [ [M.MOVE],                        [L],       [O.AnIndir, O.An],           [[12, 3, 0]]                         ],
+  [ [M.MOVE, M.MOVEA],               [L],       [O.AnIndir, O.An],           [[12, 3, 0]]                         ],
   [ [M.MOVE],                        [L],       [O.AnIndir, O.AnIndir],      [[20, 3, 2]]                         ],
   [ [M.MOVE],                        [L],       [O.AnIndir, O.AnPostInc],    [[20, 3, 2]]                         ],
   [ [M.MOVE],                        [L],       [O.AnIndir, O.AnPreDec],     [[20, 3, 2]]                         ],
@@ -270,7 +270,7 @@ export const baseTimes: TimingTable = [
   [ [M.MOVE],                        [L],       [O.PcDisp, O.AnDisp],        [[28, 5, 2]]                         ],
   [ [M.MOVE],                        [L],       [O.PcDisp, O.AnDispIx],      [[30, 5, 2]]                         ],
   [ [M.MOVE],                        [L],       [O.PcDisp, O.AbsW],          [[28, 5, 2]]                         ],
-  [ [M.MOVE],                        [L],       [O.PcDisp, O.AbsL],          [[32, 5, 2]]                         ],
+  [ [M.MOVE],                        [L],       [O.PcDisp, O.AbsL],          [[32, 6, 2]]                         ],
   //----------------------------------------------------------------------------------------------------------------
   [ [M.MOVE],                        [L],       [O.PcDispIx, O.Dn],          [[18, 4, 0]]                         ],
   [ [M.MOVE, M.MOVEA],               [L],       [O.PcDispIx, O.An],          [[18, 4, 0]]                         ],
@@ -328,14 +328,14 @@ export const baseTimes: TimingTable = [
   //----------------------------------------------------------------------------------------------------------------
   // Immediate Instruction Execution Times:
   //----------------------------------------------------------------------------------------------------------------
-  [ [M.ADD, M.ADDI, M.SUB, M.SUBI],  [B, W],    [O.Imm, O.Dn],               [[8, 2, 1]]                          ],
-  [ [M.ADD, M.ADDI, M.SUB, M.SUBI],  [B, W],    [O.Imm, OG.M],               [[8, 1, 1]]                          ],
+  [ [M.ADD, M.ADDI, M.SUB, M.SUBI],  [B, W],    [O.Imm, O.Dn],               [[8, 2, 0]]                          ],
+  [ [M.ADD, M.ADDI, M.SUB, M.SUBI],  [B, W],    [O.Imm, OG.M],               [[12, 2, 1]]                         ],
   [ [M.ADD, M.ADDI, M.SUB, M.SUBI],  [L],       [O.Imm, O.Dn],               [[16, 3, 0]]                         ],
   [ [M.ADD, M.ADDI, M.SUB, M.SUBI],  [L],       [O.Imm, OG.M],               [[20, 3, 2]]                         ],
   //----------------------------------------------------------------------------------------------------------------
   [ [M.ADDQ, M.SUBQ],                [B, W],    [O.Imm, O.Dn],               [[4, 1, 0]]                          ],
   [ [M.ADDQ, M.SUBQ],                [B, W],    [O.Imm, O.An],               [[8, 1, 0]]                          ],
-  [ [M.ADDQ, M.SUBQ],                [B, W],    [O.Imm, OG.M],               [[8, 1, 0]]                          ],
+  [ [M.ADDQ, M.SUBQ],                [B, W],    [O.Imm, OG.M],               [[8, 1, 1]]                          ],
   [ [M.ADDQ, M.SUBQ],                [L],       [O.Imm, O.Dn],               [[8, 1, 0]]                          ],
   [ [M.ADDQ, M.SUBQ],                [L],       [O.Imm, O.An],               [[8, 1, 0]]                          ],
   [ [M.ADDQ, M.SUBQ],                [L],       [O.Imm, OG.M],               [[12, 1, 2]]                         ],
@@ -343,8 +343,7 @@ export const baseTimes: TimingTable = [
   [ [M.AND, M.ANDI, M.OR, M.ORI],    [B, W],    [O.Imm, O.Dn],               [[8, 2, 0]]                          ],
   [ [M.AND, M.ANDI, M.OR, M.ORI],    [B, W],    [O.Imm, OG.M],               [[12, 2, 1]]                         ],
   [ [M.AND, M.ANDI, M.OR, M.ORI],    [L],       [O.Imm, O.Dn],               [[16, 3, 0]]                         ],
-  [ [M.AND, M.ANDI],                 [L],       [O.Imm, OG.M],               [[20, 3, 1]]                         ],
-  [ [M.OR, M.ORI],                   [L],       [O.Imm, OG.M],               [[20, 3, 2]]                         ],
+  [ [M.AND, M.ANDI, M.OR, M.ORI],    [L],       [O.Imm, OG.M],               [[20, 3, 2]]                         ],
   //----------------------------------------------------------------------------------------------------------------
   [ [M.CMP, M.CMPI],                 [B, W],    [O.Imm, O.Dn],               [[8, 2, 0]]                          ],
   [ [M.CMP, M.CMPI],                 [B, W],    [O.Imm, OG.M],               [[8, 2, 0]]                          ],
@@ -352,7 +351,7 @@ export const baseTimes: TimingTable = [
   [ [M.CMP, M.CMPI],                 [L],       [O.Imm, OG.M],               [[12, 3, 0]]                         ],
   //----------------------------------------------------------------------------------------------------------------
   [ [M.EOR, M.EORI],                 [B, W],    [O.Imm, O.Dn],               [[8, 2, 0]]                          ],
-  [ [M.EOR, M.EORI],                 [B, W],    [O.Imm, OG.M],               [[12, 1, 0]]                         ],
+  [ [M.EOR, M.EORI],                 [B, W],    [O.Imm, OG.M],               [[12, 2, 1]]                         ],
   [ [M.EOR, M.EORI],                 [L],       [O.Imm, O.Dn],               [[16, 3, 0]]                         ],
   [ [M.EOR, M.EORI],                 [L],       [O.Imm, OG.M],               [[20, 3, 2]]                         ],
   //----------------------------------------------------------------------------------------------------------------
@@ -367,7 +366,7 @@ export const baseTimes: TimingTable = [
   [ [M.CLR, M.NOT, M.NEG],           [L],       [OG.M],                      [[12, 1, 2]]                         ],
   //----------------------------------------------------------------------------------------------------------------
   [ [M.NBCD],                        [B],       [O.Dn],                      [[6, 1, 0]]                          ],
-  [ [M.NBCD],                        [B],       [OG.M],                      [[8, 1, 0]]                          ],
+  [ [M.NBCD],                        [B],       [OG.M],                      [[8, 1, 1]]                          ],
   //----------------------------------------------------------------------------------------------------------------
   [ [M.NEGX],                        [B, W],    [O.Dn],                      [[4, 1, 0]]                          ],
   [ [M.NEGX],                        [B, W],    [OG.M],                      [[8, 1, 1]]                          ],
@@ -377,7 +376,7 @@ export const baseTimes: TimingTable = [
   [ SCC,                             [B],       [O.Dn],                      [[4, 1, 0], [6, 1, 0]]               ],
   [ SCC,                             [B],       [OG.M],                      [[8, 1, 1], [8, 1, 1]]               ],
   //----------------------------------------------------------------------------------------------------------------
-  [ [M.TAS],                         [B],       [O.Dn],                      [[4, 1, 1]]                          ],
+  [ [M.TAS],                         [B],       [O.Dn],                      [[4, 1, 0]]                          ],
   [ [M.TAS],                         [B],       [OG.M],                      [[10, 1, 1]]                         ],
   //----------------------------------------------------------------------------------------------------------------
   [ [M.TST],                         [B, W, L], [O.Dn],                      [[4, 1, 0]]                          ],
@@ -391,7 +390,7 @@ export const baseTimes: TimingTable = [
   [ SHIFT,                           [B, W],    [O.Dn, O.Dn],                [[6, 1, 0]],                [2, 0, 0]],
   [ SHIFT,                           [B, W],    [O.Dn, OG.M],                [[8, 1, 1]],                [2, 0, 0]],
   [ SHIFT,                           [B, W],    [O.Dn],                      [[8, 1, 0]],                         ],
-  [ SHIFT,                           [B, W],    [OG.M],                      [[10, 1, 1]],                        ],
+  [ SHIFT,                           [B, W],    [OG.M],                      [[8, 1, 1]],                         ],
   [ SHIFT,                           [L],       [O.Imm, O.Dn],               [[8, 1, 0]],                [2, 0, 0]],
   [ SHIFT,                           [L],       [O.Dn],                      [[10, 1, 0]],                        ],
   [ SHIFT,                           [L],       [O.Dn, O.Dn],                [[8, 1, 0]],                [2, 0, 0]],
@@ -416,7 +415,7 @@ export const baseTimes: TimingTable = [
   // CONDITIONAL INSTRUCTION EXECUTION TIMES:                                 Taken:      Not taken:  Expired:
   //----------------------------------------------------------------------------------------------------------------
   [ BCC,                             [B],       [O.AbsL],                    [[10, 2, 0], [8, 1, 0]]              ],
-  [ BCC,                             [W],       [O.AbsL],                    [[10, 2, 0], [12, 1, 0]]             ],
+  [ BCC,                             [W],       [O.AbsL],                    [[10, 2, 0], [12, 2, 0]]             ],
   //----------------------------------------------------------------------------------------------------------------
   [ [M.BRA],                         [B, W],    [O.AbsL],                    [[10, 2, 0]]                         ],
   [ [M.BSR],                         [B, W],    [O.AbsL],                    [[18, 2, 2]]                         ],
@@ -428,14 +427,14 @@ export const baseTimes: TimingTable = [
   //----------------------------------------------------------------------------------------------------------------
   [ [M.JMP],                         [null],    [O.AnIndir],                 [[8, 2, 0]]                          ],
   [ [M.JMP],                         [null],    [O.AnDisp],                  [[10, 2, 0]]                         ],
-  [ [M.JMP],                         [null],    [O.AnDispIx],                [[14, 3, 0]]                         ],
+  [ [M.JMP],                         [null],    [O.AnDispIx],                [[14, 2, 0]]                         ],
   [ [M.JMP],                         [null],    [O.AbsW],                    [[10, 2, 0]]                         ],
   [ [M.JMP],                         [null],    [O.AbsL],                    [[12, 3, 0]]                         ],
   [ [M.JMP],                         [null],    [O.PcDisp],                  [[10, 2, 0]]                         ],
-  [ [M.JMP],                         [null],    [O.PcDispIx],                [[14, 3, 0]]                         ],
+  [ [M.JMP],                         [null],    [O.PcDispIx],                [[14, 2, 0]]                         ],
   //----------------------------------------------------------------------------------------------------------------
-  [ [M.JSR],                         [null],    [O.AnIndir],                 [[16, 2, 0]]                         ],
-  [ [M.JSR],                         [null],    [O.AnDisp],                  [[18, 2, 0]]                         ],
+  [ [M.JSR],                         [null],    [O.AnIndir],                 [[16, 2, 2]]                         ],
+  [ [M.JSR],                         [null],    [O.AnDisp],                  [[18, 2, 2]]                         ],
   [ [M.JSR],                         [null],    [O.AnDispIx],                [[22, 2, 2]]                         ],
   [ [M.JSR],                         [null],    [O.AbsW],                    [[18, 2, 2]]                         ],
   [ [M.JSR],                         [null],    [O.AbsL],                    [[20, 3, 2]]                         ],
@@ -492,7 +491,7 @@ export const baseTimes: TimingTable = [
   // MULTIPRECISION INSTRUCTION EXECUTION TIMES:
   //----------------------------------------------------------------------------------------------------------------
   [ [M.ADDX, M.SUBX],                [B, W],    [O.Dn, O.Dn],                [[4, 1, 0]]                          ],
-  [ [M.ADDX, M.SUBX],                [B, W],    [O.AnPreDec, O.AnPreDec],    [[18, 3, 0]]                         ],
+  [ [M.ADDX, M.SUBX],                [B, W],    [O.AnPreDec, O.AnPreDec],    [[18, 3, 1]]                         ],
   [ [M.ADDX, M.SUBX],                [L],       [O.Dn, O.Dn],                [[8, 1, 0]]                          ],
   [ [M.ADDX, M.SUBX],                [L],       [O.AnPreDec, O.AnPreDec],    [[30, 5, 2]]                         ],
   //----------------------------------------------------------------------------------------------------------------
@@ -503,9 +502,10 @@ export const baseTimes: TimingTable = [
   [ [M.ABCD, M.SBCD],                [B],       [O.AnPreDec, O.AnPreDec],    [[18, 3, 1]]                         ],
 
   //----------------------------------------------------------------------------------------------------------------
-  // MISCELLANEOUS INSTRUCTION EXECUTION TIMES:                               Taken:      Not taken:
+  // MISCELLANEOUS INSTRUCTION EXECUTION TIMES:                              No trap:     Trap >:     Trap <:
   //----------------------------------------------------------------------------------------------------------------
-  [ [M.CHK],                         [W,L],     [OG.EA, O.Dn],               [[44, 5, 3], [10, 1, 0]]             ],
+  [ [M.CHK],                         [W,L],     [OG.EA, O.Dn],               [[10, 1, 0], [38, 5, 3], [40, 5, 3]] ],
+
   [ [M.EXG],                         [L],       [O.Dn,O.Dn],                 [[6, 1, 0]]                          ],
   [ [M.EXG],                         [L],       [O.Dn, O.An],                [[6, 1, 0]]                          ],
   [ [M.EXG],                         [L],       [O.An,O.Dn],                 [[6, 1, 0]]                          ],
@@ -513,25 +513,29 @@ export const baseTimes: TimingTable = [
   [ [M.EXT],                         [W, L],    [O.Dn],                      [[4, 1, 0]]                          ],
   [ [M.LINK],                        [W, L],    [O.An,O.Imm],                [[16, 2, 2]]                         ],
   [ [M.NOP],                         [null],    [],                          [[4, 1, 0]]                          ],
-  [ [M.RESET],                       [null],    [],                          [[40, 6, 0]]                         ],
+  [ [M.RESET],                       [null],    [],                          [[132, 1, 0]]                        ],
   [ [M.RTE],                         [null],    [],                          [[20, 5, 0]]                         ],
   [ [M.RTR],                         [null],    [],                          [[20, 5, 0]]                         ],
   [ [M.RTS],                         [null],    [],                          [[16, 4, 0]]                         ],
-  [ [M.STOP],                        [null],    [O.Imm],                     [[4, 0, 0]]                          ],
+  [ [M.STOP],                        [null],    [O.Imm],                     [[4, 1, 0]]                          ],
   [ [M.SWAP],                        [W],       [O.Dn],                      [[4, 1, 0]]                          ],
-  [ [M.TRAP],                        [null],    [O.Imm],                     [[38, 4, 0]]                         ],
-  [ [M.TRAPV],                       [null],    [],                          [[34, 4, 0], [4, 1, 0]]              ],
+  [ [M.TRAP],                        [null],    [O.Imm],                     [[34, 4, 3]]                         ],
+  [ [M.TRAPV],                       [null],    [],                          [[4, 1, 0], [34, 5, 3]]              ],
   [ [M.UNLK],                        [null],    [O.An],                      [[12, 3, 0]]                         ],
-  // TODO:
-  // ANDI to CCR	byte	 20(3/0)	   -
-  // ANDI to SR	word	 20(3/0)	   -
-  // EORI to CCR	byte	 20(3/0)	   -
-  // EORI to SR	word	 20(3/0)	   -
-  // ORI to CCR	byte	 20(3/0)	   -
-  // ORI to SR	word	 20(3/0)	   -
-  // MOVE from SR	 -	  6(1/0)	 8(1/1)+
-  // MOVE to CCR	 -	 12(1/0)	12(1/0)+
-  // MOVE to SR	 -	 12(1/0)	12(1/0)+
+  [ [M.ILLEGAL],                     [null],    [],                          [[34, 4, 3]]                         ],
+
+  //----------------------------------------------------------------------------------------------------------------
+  // CCR/SR
+  //----------------------------------------------------------------------------------------------------------------
+  [ [M.AND, M.ANDI, M.EOR, M.EORI],  [B, W],    [O.Imm, O.CCR],              [[20, 3, 0]]                         ],
+  [ [M.OR, M.ORI],                   [B, W],    [O.Imm, O.CCR],              [[20, 3, 0]]                         ],
+  [ [M.AND, M.ANDI, M.EOR, M.EORI],  [B, W],    [O.Imm, O.SR],               [[20, 3, 0]]                         ],
+  [ [M.OR, M.ORI],                   [B, W],    [O.Imm, O.SR],               [[20, 3, 0]]                         ],
+  [ [M.MOVE],                        [W],       [O.SR, OG.EA],               [[6, 1, 0]]                          ],
+  [ [M.MOVE],                        [W],       [OG.EA, O.CCR],              [[12, 1, 0]]                         ],
+  [ [M.MOVE],                        [W],       [OG.EA, O.SR],               [[12, 1, 0]]                         ],
+  [ [M.MOVE],                        [L],       [O.An, O.USP],               [[4, 1, 0]]                          ],
+  [ [M.MOVE],                        [L],       [O.USP, O.An],               [[4, 1, 0]]                          ],
 
   //----------------------------------------------------------------------------------------------------------------
   // Move Peripheral Instruction Execution Times

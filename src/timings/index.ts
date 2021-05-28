@@ -206,7 +206,17 @@ for (const row of baseTimes) {
       if (Array.isArray(operands[0])) {
         // EA lookup in source
         for (o of operands[0]) {
-          const ea = lookupTimes[o][eaSize];
+          let ea = lookupTimes[o][eaSize];
+          // Special cases:
+          if (mnemonic === Mnemonics.TAS && o === AddressingModes.AbsW) {
+            ea = [8, 1, 0];
+          }
+          if (
+            (mnemonic === Mnemonics.TAS || mnemonic === Mnemonics.CHK) &&
+            o === AddressingModes.AbsL
+          ) {
+            ea = [12, 2, 0];
+          }
           let k = key + " " + o;
           if (operands[1]) {
             k += "," + operands[1];

@@ -70,5 +70,8 @@ const addressingModePatterns: { type: AddressingMode; exp: RegExp }[] = [
     // Rn[/-]Rn
     exp: new RegExp(`${rn}[\\/-]${rn}`, "i"),
   },
+  { type: AddressingModes.CCR, exp: /^ccr$/i },
+  { type: AddressingModes.SR, exp: /^sr$/i },
+  { type: AddressingModes.USP, exp: /^usp$/i },
   { type: AddressingModes.AbsW, exp: /\.W$/i },
 ];
