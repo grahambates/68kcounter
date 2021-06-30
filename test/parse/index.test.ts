@@ -249,9 +249,20 @@ describe("parse()", () => {
       expect(result.statement.opcode.op.name).toEqual(Directives.MACRO);
     });
 
-    test("macro invocation", () => {
+    test("macro invocation: label", () => {
       const lines = parse(`
 a:    macro
+      move.w \\1,\\2
+      endm
+      a d0,(a0)`);
+      expect(lines[4].macroLines).toHaveLength(1);
+      expect(lines[4].bytes).toEqual(2);
+      expect(lines[4].timing?.values).toEqual([[8, 1, 1]]);
+    });
+
+    test("macro invocation: operand", () => {
+      const lines = parse(`
+      macro a
       move.w \\1,\\2
       endm
       a d0,(a0)`);
