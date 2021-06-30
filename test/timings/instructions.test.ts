@@ -62,7 +62,7 @@ const parseTime = (str: string, m?: number): Timing =>
 describe("instruction timings", () => {
   const lines = parse(instructions);
   for (let i = 0; i < lines.length; i++) {
-    const { statement, timings, calculation } = lines[i];
+    const { statement, timing } = lines[i];
     if (
       // Does this look like it should be an instruction?
       // Don't rely on `isInstruction()` as this won't catch unsupported mnemonics
@@ -73,6 +73,7 @@ describe("instruction timings", () => {
     ) {
       test(statement.text, () => {
         expect(statement.isInstruction()).toBeTruthy();
+        const { values: timings, calculation } = timing;
         const m = Array.isArray(calculation.n)
           ? calculation.n[0]
           : calculation.n;

@@ -38,7 +38,7 @@ export function calculateTotals(lines: Line[]): Totals {
         objectBytes += line.bytes;
       }
     }
-    const timings = line.timings;
+    const timings = line.timing?.values;
     if (!timings) {
       continue;
     }

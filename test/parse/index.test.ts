@@ -30,7 +30,7 @@ describe("parse()", () => {
         ((result.statement
           .operands[1] as EffectiveAddressNode) as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.AnIndir);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -42,14 +42,14 @@ describe("parse()", () => {
         ((result.statement
           .operands[0] as EffectiveAddressNode) as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.Dn);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
     test("unary", () => {
       const [result] = parse("  rts");
       expect(result.statement.opcode.op.name).toEqual(Mnemonics.RTS);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -65,7 +65,7 @@ describe("parse()", () => {
       expect(
         (result.statement.operands[1] as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.Dn);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -80,7 +80,7 @@ describe("parse()", () => {
       expect(
         (result.statement.operands[1] as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.AnIndir);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -95,7 +95,7 @@ describe("parse()", () => {
       expect(
         (result.statement.operands[1] as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.AnIndir);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -110,7 +110,7 @@ describe("parse()", () => {
       expect(
         (result.statement.operands[1] as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.AnIndir);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -125,7 +125,7 @@ describe("parse()", () => {
       expect(
         (result.statement.operands[1] as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.AnIndir);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -140,7 +140,7 @@ describe("parse()", () => {
       expect(
         (result.statement.operands[1] as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.AnIndir);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -154,7 +154,7 @@ describe("parse()", () => {
       expect(
         (result.statement.operands[1] as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.AnIndir);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -168,7 +168,7 @@ describe("parse()", () => {
       expect(
         (result.statement.operands[1] as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.AnIndir);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
 
@@ -182,7 +182,7 @@ describe("parse()", () => {
       expect(
         (result.statement.operands[1] as EffectiveAddressNode).mode
       ).toEqual(AddressingModes.AnIndir);
-      expect(result.timings).toBeTruthy();
+      expect(result.timing).toBeTruthy();
       expect(result.bytes).toBeTruthy();
     });
   });
@@ -198,7 +198,7 @@ describe("parse()", () => {
     expect((result.statement.operands[1] as EffectiveAddressNode).mode).toEqual(
       AddressingModes.AnIndir
     );
-    expect(result.timings).toBeTruthy();
+    expect(result.timing).toBeTruthy();
     expect(result.bytes).toBeTruthy();
   });
 
@@ -257,7 +257,7 @@ a:    macro
       a d0,(a0)`);
       expect(lines[4].macroLines).toHaveLength(1);
       expect(lines[4].bytes).toEqual(2);
-      expect(lines[4].timings).toEqual([[8, 1, 1]]);
+      expect(lines[4].timing?.values).toEqual([[8, 1, 1]]);
     });
 
     test("rept", () => {
@@ -267,7 +267,7 @@ a:    macro
       endr`);
       expect(lines[3].macroLines).toHaveLength(4);
       expect(lines[3].bytes).toEqual(2 * 4);
-      expect(lines[3].timings).toEqual([[8 * 4, 4, 4]]);
+      expect(lines[3].timing.values).toEqual([[8 * 4, 4, 4]]);
     });
 
     test("bss section", () => {
@@ -296,7 +296,7 @@ foo=4
       `;
       const lines = parse(code);
       const n = 4;
-      expect(lines[2].timings).toEqual([[6 + 2 * n, 1, 0]]);
+      expect(lines[2].timing.values).toEqual([[6 + 2 * n, 1, 0]]);
     });
 
     test("forward ref", () => {
@@ -306,7 +306,7 @@ foo=4
       `;
       const lines = parse(code);
       const n = 4;
-      expect(lines[1].timings).toEqual([[6 + 2 * n, 1, 0]]);
+      expect(lines[1].timing.values).toEqual([[6 + 2 * n, 1, 0]]);
     });
   });
 

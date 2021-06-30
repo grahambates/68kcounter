@@ -5,6 +5,7 @@ import {
   AddressingModes,
   Mnemonics,
   mnemonicGroups,
+  Mnemonic,
 } from "../syntax";
 import instructionQualifier from "../parse/instructionQualifier";
 import { EffectiveAddressNode, InstructionStatement } from "../parse/nodes";
@@ -20,8 +21,9 @@ export type Timing = [number, number, number];
  * Result of timing lookup for an instruction
  */
 export interface InstructionTiming {
-  timings: Timing[];
-  calculation: Calculation;
+  values: Timing[];
+  labels: string[];
+  calculation?: Calculation;
 }
 
 /**
@@ -129,7 +131,10 @@ export function instructionTimings(
     }
   }
 
-  return { timings, calculation };
+  // Add labels for multiple values
+  const labels = timings.length > 1 ? timingLabels(op.name) : [];
+
+  return { values: timings, labels, calculation };
 }
 
 /**
@@ -165,6 +170,26 @@ export function rangeN(range: string): number {
     });
     return acc + (to ? to - from + 1 : 1);
   }, 0);
+}
+
+/**
+ * Get text labels for multiple timings
+ */
+export function timingLabels(op: Mnemonic): string[] {
+  if ([...mnemonicGroups.SCC, ...mnemonicGroups.BCC].includes(op)) {
+    return ["Taken", "Not taken"];
+  }
+  if (mnemonicGroups.DBCC.includes(op)) {
+    return ["Taken", "Not taken", "Expired"];
+  }
+  if (op === Mnemonics.CHK) {
+    return ["No trap", "Trap >", "Trap <"];
+  }
+  if (op === Mnemonics.TRAPV) {
+    return ["No trap", "Trap"];
+  }
+  // Default
+  return ["Min", "Max"];
 }
 
 /**

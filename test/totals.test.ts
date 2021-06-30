@@ -1,13 +1,14 @@
-import { Line } from "../src/parse";
+import { Line, StatementNode } from "../src/parse";
 import { calculateTotals } from "../src/totals";
 
 describe("calculateTotals", () => {
+  const statement = new StatementNode(" move.w d0,d1");
   test("single timings", () => {
     const lines: Line[] = [
-      { text: "", timings: [[4, 2, 1]], bytes: 2 },
-      { text: "", timings: [[8, 1, 0]], bytes: 1 },
-      { text: "" },
-      { text: "", timings: [[12, 0, 1]], bytes: 2 },
+      { statement, timing: { values: [[4, 2, 1]], labels: [] }, bytes: 2 },
+      { statement, timing: { values: [[8, 1, 0]], labels: [] }, bytes: 1 },
+      { statement },
+      { statement, timing: { values: [[12, 0, 1]], labels: [] }, bytes: 2 },
     ];
     const result = calculateTotals(lines);
     expect(result.isRange).toEqual(false);
@@ -19,16 +20,19 @@ describe("calculateTotals", () => {
   test("range", () => {
     const lines: Line[] = [
       {
-        text: "",
-        timings: [
-          [4, 2, 1],
-          [6, 2, 1],
-        ],
+        statement,
+        timing: {
+          values: [
+            [4, 2, 1],
+            [6, 2, 1],
+          ],
+          labels: [],
+        },
         bytes: 2,
       },
-      { text: "", timings: [[8, 1, 0]], bytes: 1 },
-      { text: "" },
-      { text: "", timings: [[12, 0, 1]], bytes: 2 },
+      { statement, timing: { values: [[8, 1, 0]], labels: [] }, bytes: 1 },
+      { statement },
+      { statement, timing: { values: [[12, 0, 1]], labels: [] }, bytes: 2 },
     ];
     const result = calculateTotals(lines);
     expect(result.isRange).toEqual(true);

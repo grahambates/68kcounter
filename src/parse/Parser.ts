@@ -1,4 +1,4 @@
-import { Calculation, instructionTimings, Timing } from "../timings";
+import { InstructionTiming, instructionTimings } from "../timings";
 import { Directives, Directive } from "../syntax";
 import {
   DirectiveStatement,
@@ -16,8 +16,7 @@ export interface Line {
   macroLines?: Line[];
   bytes?: number;
   bss?: boolean;
-  timings?: Timing[] | null;
-  calculation?: Calculation;
+  timing?: InstructionTiming;
 }
 
 export default class Parser {
@@ -126,13 +125,14 @@ export default class Parser {
         // End of repeat
         line.macroLines = [];
         // Expand and process repeated statements
-        const countOp = this.reptStart.statement.operands[0];
-        const reptCount = (countOp && evaluate(countOp.text)) || 0;
+        const countOp = this.reptStart.statement.operands[0]?.text;
+        const reptCount = evaluate(countOp) || 0;
         const statements = this.reptStatements;
 
         this.reptStart = null;
         this.reptStatements = [];
 
+        // TODO: support REPTN
         for (let i = 0; i < reptCount; i++) {
           line.macroLines = [
             ...line.macroLines,
@@ -161,9 +161,15 @@ export default class Parser {
       const macroTotals = calculateTotals(line.macroLines);
       line.bytes = macroTotals.bytes;
       if (macroTotals.min[0]) {
-        line.timings = macroTotals.isRange
-          ? [macroTotals.min, macroTotals.max]
-          : [macroTotals.min];
+        line.timing = macroTotals.isRange
+          ? {
+              values: [macroTotals.min, macroTotals.max],
+              labels: ["Min", "Max"],
+            }
+          : {
+              values: [macroTotals.min],
+              labels: [],
+            };
       }
     }
 
@@ -218,9 +224,14 @@ export default class Parser {
     }
 
     // Macro definition:
-    else if (statement.opcode.op.name === Directives.MACRO && statement.label) {
-      this.currentMacro = statement.label.text.toUpperCase();
-      this.macros[this.currentMacro] = [];
+    else if (statement.opcode.op.name === Directives.MACRO) {
+      const macroName = statement.label
+        ? statement.label.text
+        : statement.operands[0]?.text;
+      if (macroName) {
+        this.currentMacro = macroName.toUpperCase();
+        this.macros[this.currentMacro] = [];
+      }
     }
 
     // Rept start:
@@ -239,14 +250,11 @@ export default class Parser {
   }
 
   private processInstruction(statement: StatementNode & InstructionStatement) {
-    const line: Line = { statement, bss: this.bss };
-
-    // Get instruction timings:
-    const timingResult = instructionTimings(statement, this.vars);
-    if (timingResult) {
-      line.timings = timingResult.timings;
-      line.calculation = timingResult.calculation;
-    }
+    const line: Line = {
+      statement,
+      bss: this.bss,
+      timing: instructionTimings(statement, this.vars) || undefined,
+    };
     return line;
   }
 }

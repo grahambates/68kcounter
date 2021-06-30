@@ -35,8 +35,8 @@ const file = fs.readFileSync(filePath).toString();
 const lines = parse(file);
 lines.forEach((l) => {
   let annotation = "";
-  if (l.timings) {
-    annotation += l.timings.map(formatTimingColored).join(" / ");
+  if (l.timing) {
+    annotation += l.timing.values.map(formatTimingColored).join(" / ");
   }
   if (l.bytes) {
     annotation += " " + formatNumber(l.bytes);
