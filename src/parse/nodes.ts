@@ -1,3 +1,4 @@
+import json5 from "json5";
 import {
   AddressingMode,
   aliases,
@@ -117,7 +118,12 @@ export class StringNode extends Node {
   value: string;
   constructor(start: number, text: string) {
     super(start, text, "String");
-    this.value = JSON.parse(text);
+    try {
+      this.value = json5.parse(text);
+    } catch (_) {
+      this.value = "";
+      console.error("Unable to parse text", { text });
+    }
   }
 }
 

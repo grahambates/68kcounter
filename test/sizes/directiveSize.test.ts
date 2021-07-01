@@ -40,6 +40,11 @@ foo=2
     expect(result.bytes).toEqual(18);
   });
 
+  test("dc.b string: single quotes", () => {
+    const [result] = parse(".GfxLib:dc.b 'graphics.library',0,0");
+    expect(result.bytes).toEqual(18);
+  });
+
   test("dcb.w from label range", () => {
     const code = `
 start:

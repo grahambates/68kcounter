@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "chalk": "^4.1.0",
-    "expression-eval": "^4.0.0"
+    "expression-eval": "^4.0.0",
+    "json5": "^2.2.0"
   }
 }
