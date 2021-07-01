@@ -69,8 +69,8 @@ export default class Parser {
   parse(input: string): Line[] {
     // Split input into lines
     const inputLines = input
-      .replace(/\r\n/, "\n")
-      .replace(/\r/, "\n")
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
       .split("\n");
 
     // Parse individual statements:
