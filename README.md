@@ -7,7 +7,7 @@ Analyses 68000 assembly source to profile resource and size data. For each instr
 - CPU cycles
 - Bus read cycles
 - Bus write cycles
-- Size in words
+- Size in bytes
 
 ## Usage:
 
