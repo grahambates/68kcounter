@@ -101,8 +101,14 @@ export function instructionTimings(
     }
     // MOVEM
     else if (op.name === Mnemonics.MOVEM) {
-      const operand = operands.find((o) => o.mode === AddressingModes.RegList);
-      calculation.n = operand && rangeN(operand.text);
+      const listOperand = operands.find(
+        (o) => o.mode === AddressingModes.RegList
+      );
+      if (listOperand) {
+        calculation.n = listOperand && rangeN(listOperand.text);
+      } else {
+        calculation.n = 1;
+      }
     }
 
     // Apply multiplier:
@@ -232,31 +238,37 @@ for (const row of baseTimes) {
       if (Array.isArray(operands[0])) {
         // EA lookup in source
         for (o of operands[0]) {
-          let ea = lookupTimes[o][eaSize];
-          // Special cases:
-          if (mnemonic === Mnemonics.TAS && o === AddressingModes.AbsW) {
-            ea = [8, 1, 0];
-          }
-          if (
-            (mnemonic === Mnemonics.TAS ||
-              mnemonic === Mnemonics.CHK ||
-              mnemonic === Mnemonics.MULS ||
-              mnemonic === Mnemonics.MULU) &&
-            o === AddressingModes.AbsL
-          ) {
-            ea = [12, 2, 0];
-          }
           let k = key + " " + o;
           if (operands[1]) {
             k += "," + operands[1];
+          }
+          let ea: Timing | undefined;
+          if (lookupTimes[o]) {
+            ea = lookupTimes[o][eaSize];
+            // Special cases:
+            if (mnemonic === Mnemonics.TAS && o === AddressingModes.AbsW) {
+              ea = [8, 1, 0];
+            }
+            if (
+              (mnemonic === Mnemonics.TAS ||
+                mnemonic === Mnemonics.CHK ||
+                mnemonic === Mnemonics.MULS ||
+                mnemonic === Mnemonics.MULU) &&
+              o === AddressingModes.AbsL
+            ) {
+              ea = [12, 2, 0];
+            }
           }
           timingMap.set(k, { base, ea, multiplier });
         }
       } else if (Array.isArray(operands[1])) {
         // EA lookup in dest
         for (o of operands[1]) {
-          const ea = lookupTimes[o][eaSize];
           const k = key + " " + operands[0] + "," + o;
+          let ea: Timing | undefined;
+          if (lookupTimes[o]) {
+            ea = lookupTimes[o][eaSize];
+          }
           timingMap.set(k, { base, ea, multiplier });
         }
       } else {

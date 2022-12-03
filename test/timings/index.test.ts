@@ -104,6 +104,26 @@ describe("timings", () => {
     const [result] = parse(" nop");
     expect(result.timing.values).toEqual([[4, 1, 0]]);
   });
+
+  test("movem - single data src", () => {
+    const [result] = parse(" movem.w d0,(a0)");
+    expect(result.timing.values).toEqual([[12, 2, 1]]);
+  });
+
+  test("movem - single address src", () => {
+    const [result] = parse(" movem.w a0,(a0)");
+    expect(result.timing.values).toEqual([[12, 2, 1]]);
+  });
+
+  test("movem - single data dest", () => {
+    const [result] = parse(" movem.w (a0),d0");
+    expect(result.timing.values).toEqual([[16, 4, 0]]);
+  });
+
+  test("movem - single address dest", () => {
+    const [result] = parse(" movem.w (a0),a0");
+    expect(result.timing.values).toEqual([[16, 4, 0]]);
+  });
 });
 
 describe("formatTiming", () => {
