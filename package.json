@@ -46,8 +46,10 @@
     "typescript": "^4.2.3"
   },
   "dependencies": {
+    "@types/yargs": "^17.0.24",
     "chalk": "^4.1.0",
     "expression-eval": "^4.0.0",
-    "json5": "^2.2.0"
+    "json5": "^2.2.0",
+    "yargs": "^17.7.2"
   }
 }

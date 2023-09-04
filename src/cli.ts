@@ -1,78 +1,82 @@
 #!/usr/bin/env node
 import fs from "fs";
 import path from "path";
-import chalk, { Color } from "chalk";
-import { argv } from "process";
-import parse, {
-  calculateTotals,
-  formatTiming,
-  Level,
-  Levels,
-  timingLevel,
-} from ".";
-import { Timing } from "./timings";
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
 
-const levelToColor: Record<Level, typeof Color> = {
-  [Levels.VHigh]: "bgRed",
-  [Levels.High]: "red",
-  [Levels.Med]: "yellow",
-  [Levels.Low]: "green",
-};
+import parse, { calculateTotals } from ".";
+import { Formatter, JsonFormatter, PlainTextFormatter } from "./formatters";
 
-if (!argv[2]) {
-  console.error("Specify a filename");
-  process.exit(1);
+// CLI args:
+
+const argv = yargs(hideBin(process.argv))
+  .usage("Usage: $0 [options] [file]")
+  .options({
+    stdin: {
+      describe: "Read input from stdin, not file",
+      type: "boolean",
+      default: false,
+    },
+    format: {
+      describe: "Output format",
+      choices: ["text", "json"] as const,
+      default: "text",
+      alias: "f",
+    },
+    color: {
+      describe: "Color plain text output",
+      type: "boolean",
+      default: true,
+      alias: "c",
+    },
+    prettyPrint: {
+      describe: "Print JSON with whitespace",
+      type: "boolean",
+      default: true,
+    },
+    include: {
+      describe: "Elements to include in JSON (default all)",
+      type: "string",
+      default: "text,timings,bytes,totals",
+      alias: "i",
+    },
+  })
+  .parseSync();
+
+// Get input data:
+
+let filePath: string | number;
+
+if (argv.stdin) {
+  filePath = process.stdin.fd;
+} else {
+  const file = argv._[0];
+  if (!file) {
+    console.error("Specify a filename or --stdin");
+    process.exit(1);
+  }
+  filePath = path.resolve(String(file));
+  if (!fs.existsSync(filePath)) {
+    console.error(`File "${file}" not found`);
+    process.exit(1);
+  }
 }
-
-const filePath = path.resolve(argv[2]);
-if (!fs.statSync(filePath)) {
-  console.error(`File "${argv[2]}" not found`);
-  process.exit(1);
-}
-
 const file = fs.readFileSync(filePath).toString();
 
-const lines = parse(file);
-lines.forEach((l) => {
-  let annotation = "";
-  if (l.timing) {
-    annotation += l.timing.values.map(formatTimingColored).join(" / ");
-  }
-  if (l.bytes) {
-    annotation += " " + formatNumber(l.bytes);
-  }
-  console.log(pad(annotation, 30) + " | " + l.statement.text);
-});
+// Format with chosen formatter:
 
-const totals = calculateTotals(lines);
-console.log("\nTotals:");
-if (totals.isRange) {
-  console.log(formatTiming(totals.min) + " - " + formatTiming(totals.max));
+let formatter: Formatter;
+if (argv.format === "json") {
+  formatter = new JsonFormatter(argv);
 } else {
-  console.log(formatTiming(totals.min));
-}
-console.log(
-  `${formatNumber(totals.bytes)} bytes (${formatNumber(
-    totals.objectBytes
-  )} object, ${formatNumber(totals.bssBytes)} BSS)`
-);
-
-function formatTimingColored(timing: Timing) {
-  const output = formatTiming(timing);
-  const level = timingLevel(timing);
-  return chalk[levelToColor[level]](output);
+  formatter = new PlainTextFormatter(argv);
 }
 
-/**
- * Display a string with padding
- */
-function pad(str: string, l: number) {
-  /*eslint-disable no-control-regex */
-  const strClean = str.replace(/(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]/g, "");
-  const p = strClean ? l - strClean.length : l;
-  return Array(p).fill(" ").join("") + str;
-}
+const lines = parse(file);
+const totals = calculateTotals(lines);
 
-function formatNumber(num: number): string {
-  return num.toLocaleString("en");
-}
+const output = formatter.format(lines, totals);
+
+// Output:
+
+console.log(output);
