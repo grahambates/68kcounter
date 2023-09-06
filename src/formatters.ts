@@ -55,6 +55,12 @@ export class JsonFormatter implements Formatter {
 export interface PlainTextOptions {
   /** Color text output in terminal */
   color: boolean;
+
+  /**
+   * Comma separated list of elements to include
+   * Possible values: "text,timings,bytes,totals"
+   */
+  include: string;
 }
 
 export class PlainTextFormatter implements Formatter {
@@ -68,31 +74,50 @@ export class PlainTextFormatter implements Formatter {
   };
 
   format(lines: Line[], totals: Totals): string {
-    const output = lines.map((l) => {
-      let annotation = "";
-      if (l.timing) {
-        const format = this.options.color
-          ? this.formatTimingColored
-          : formatTiming;
-        annotation += l.timing.values.map(format).join(" / ");
-      }
-      if (l.bytes) {
-        annotation += " " + this.formatNumber(l.bytes);
-      }
-      return this.pad(annotation, 30) + " | " + l.statement.text;
-    });
+    const elements = this.options.include.toLowerCase().split(",");
 
-    output.push("\nTotals:");
-    if (totals.isRange) {
-      output.push(formatTiming(totals.min) + " - " + formatTiming(totals.max));
-    } else {
-      output.push(formatTiming(totals.min));
-    }
-    output.push(
-      `${this.formatNumber(totals.bytes)} bytes (${this.formatNumber(
-        totals.objectBytes
-      )} object, ${this.formatNumber(totals.bssBytes)} BSS)`
+    // Only need to include lines array if one of these elements is included
+    const includeLines = ["text", "timings", "bytes"].some((v) =>
+      elements.includes(v)
     );
+
+    let output: string[] = [];
+
+    if (includeLines) {
+      output = lines.map((l) => {
+        let annotation = "";
+        if (l.timing && elements.includes("timings")) {
+          const format = this.options.color
+            ? this.formatTimingColored
+            : formatTiming;
+          annotation += l.timing.values.map(format).join(" / ");
+        }
+        if (l.bytes && elements.includes("bytes")) {
+          annotation += " " + this.formatNumber(l.bytes);
+        }
+        annotation = this.pad(annotation, 30);
+        if (elements.includes("text")) {
+          " | " + l.statement.text;
+        }
+        return annotation;
+      });
+    }
+
+    if (elements.includes("totals")) {
+      output.push("\nTotals:");
+      if (totals.isRange) {
+        output.push(
+          formatTiming(totals.min) + " - " + formatTiming(totals.max)
+        );
+      } else {
+        output.push(formatTiming(totals.min));
+      }
+      output.push(
+        `${this.formatNumber(totals.bytes)} bytes (${this.formatNumber(
+          totals.objectBytes
+        )} object, ${this.formatNumber(totals.bssBytes)} BSS)`
+      );
+    }
 
     return output.join("\n");
   }
