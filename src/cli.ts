@@ -79,6 +79,7 @@ if (file) {
     .on("data", (data) => {
       const str = data.toString();
       buf = buf + str;
+      // Flush on EOF character (ctrl+z)
       if (str.endsWith("\x26")) {
         processText(buf);
         buf = "";
