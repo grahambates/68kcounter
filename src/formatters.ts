@@ -9,6 +9,13 @@ import { Timing } from "./timings";
 import { Line } from "./parse";
 import { Totals } from "./totals";
 
+export interface IncludedElements {
+  text: boolean;
+  timings: boolean;
+  bytes: boolean;
+  totals: boolean;
+}
+
 export interface Formatter {
   format(lines: Line[], totals: Totals): string;
 }
@@ -16,51 +23,41 @@ export interface Formatter {
 export interface JsonOptions {
   /** Pretty print JSON with whtespace */
   prettyPrint: boolean;
+  /** Elements to include in output */
+  include: IncludedElements;
+}
 
-  /**
-   * Comma separated list of elements to include
-   * Possible values: "text,timings,bytes,totals"
-   */
-  include: string;
+export interface PlainTextOptions {
+  /** Color text output in terminal */
+  color: boolean;
+  /** Elements to include in output */
+  include: IncludedElements;
+  /** Width of annotation column */
+  width: number;
 }
 
 export class JsonFormatter implements Formatter {
   constructor(private options: JsonOptions) {}
 
   format(lines: Line[], totals: Totals): string {
-    const elements = this.options.include.toLowerCase().split(",");
-
-    // Only need to include lines array if one of these elements is included
-    const includeLines = ["text", "timings", "bytes"].some((v) =>
-      elements.includes(v)
-    );
+    const inc = this.options.include;
 
     const output = {
-      lines: includeLines
-        ? lines.map((l) => ({
-            text: elements.includes("text") ? l.statement.text : undefined,
-            timing: elements.includes("timings") ? l.timing : undefined,
-            bytes: elements.includes("bytes") ? l.bytes : undefined,
-          }))
-        : undefined,
-      totals: elements.includes("totals") ? totals : undefined,
+      lines:
+        inc.text || inc.timings || inc.bytes
+          ? lines.map((l) => ({
+              text: inc.text ? l.statement.text : undefined,
+              timing: inc.timings ? l.timing : undefined,
+              bytes: inc.bytes ? l.bytes : undefined,
+            }))
+          : undefined,
+      totals: inc.totals ? totals : undefined,
     };
 
     return this.options.prettyPrint
       ? JSON.stringify(output, null, 2)
       : JSON.stringify(output);
   }
-}
-
-export interface PlainTextOptions {
-  /** Color text output in terminal */
-  color: boolean;
-
-  /**
-   * Comma separated list of elements to include
-   * Possible values: "text,timings,bytes,totals"
-   */
-  include: string;
 }
 
 export class PlainTextFormatter implements Formatter {
@@ -74,36 +71,31 @@ export class PlainTextFormatter implements Formatter {
   };
 
   format(lines: Line[], totals: Totals): string {
-    const elements = this.options.include.toLowerCase().split(",");
-
-    // Only need to include lines array if one of these elements is included
-    const includeLines = ["text", "timings", "bytes"].some((v) =>
-      elements.includes(v)
-    );
+    const inc = this.options.include;
 
     let output: string[] = [];
 
-    if (includeLines) {
+    if (inc.text || inc.timings || inc.bytes) {
       output = lines.map((l) => {
         let annotation = "";
-        if (l.timing && elements.includes("timings")) {
+        if (l.timing && inc.timings) {
           const format = this.options.color
             ? this.formatTimingColored
             : formatTiming;
           annotation += l.timing.values.map(format).join(" / ");
         }
-        if (l.bytes && elements.includes("bytes")) {
+        if (l.bytes && inc.bytes) {
           annotation += " " + this.formatNumber(l.bytes);
         }
-        annotation = this.pad(annotation, 30);
-        if (elements.includes("text")) {
-          " | " + l.statement.text;
+        annotation = this.pad(annotation, this.options.width);
+        if (inc.text) {
+          annotation += " | " + l.statement.text;
         }
         return annotation;
       });
     }
 
-    if (elements.includes("totals")) {
+    if (inc.totals) {
       output.push("\nTotals:");
       if (totals.isRange) {
         output.push(
@@ -134,8 +126,8 @@ export class PlainTextFormatter implements Formatter {
   private pad(str: string, l: number) {
     /*eslint-disable no-control-regex */
     const strClean = str.replace(/(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]/g, "");
-    const p = strClean ? l - strClean.length : l;
-    return Array(p).fill(" ").join("") + str;
+    const p = l - strClean.length;
+    return p > 0 ? Array(p).fill(" ").join("") + str : str;
   }
 
   private formatNumber(num: number): string {

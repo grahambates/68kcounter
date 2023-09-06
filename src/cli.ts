@@ -5,7 +5,12 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
 import parse, { calculateTotals } from ".";
-import { Formatter, JsonFormatter, PlainTextFormatter } from "./formatters";
+import {
+  Formatter,
+  IncludedElements,
+  JsonFormatter,
+  PlainTextFormatter,
+} from "./formatters";
 
 // CLI args:
 
@@ -35,16 +40,27 @@ const argv = yargs(hideBin(process.argv))
       default: "text,timings,bytes,totals",
       alias: "i",
     },
+    width: {
+      describe: "Width of annotation column in text output",
+      type: "number",
+      default: 30,
+      alias: "w",
+    },
   })
   .parseSync();
 
 // Get input data:
 
+const options = {
+  ...argv,
+  include: parseIncludeList(argv.include),
+};
+
 let formatter: Formatter;
 if (argv.format === "json") {
-  formatter = new JsonFormatter(argv);
+  formatter = new JsonFormatter(options);
 } else {
-  formatter = new PlainTextFormatter(argv);
+  formatter = new PlainTextFormatter(options);
 }
 
 const file = argv._[0];
@@ -79,4 +95,14 @@ function processText(text: string): void {
   const totals = calculateTotals(lines);
   const output = formatter.format(lines, totals);
   console.log(output);
+}
+
+function parseIncludeList(list: string): IncludedElements {
+  const elements = list.toLowerCase().split(",");
+  return {
+    text: elements.includes("text"),
+    timings: elements.includes("timings"),
+    bytes: elements.includes("bytes"),
+    totals: elements.includes("totals"),
+  };
 }
