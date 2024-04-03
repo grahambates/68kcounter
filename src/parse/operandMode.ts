@@ -47,7 +47,7 @@ const addressingModePatterns: { type: AddressingMode; exp: RegExp }[] = [
     type: AddressingModes.AnDisp,
     exp: new RegExp(
       // d(An) | (d,An)
-      `(\\w${op + an}|${op}\\w+${comma + an + cp}$)`,
+      `(\\w${op + an}|${op}[-\\w]+${comma + an + cp}$)`,
       "i"
     ),
   },
@@ -60,7 +60,7 @@ const addressingModePatterns: { type: AddressingMode; exp: RegExp }[] = [
     type: AddressingModes.PcDisp,
     exp: new RegExp(
       // d(PC) | (d,PC)
-      `(\\w${op + pc}|${op}\\w+${comma + pc + cp}$)`,
+      `(\\w${op + pc}|${op}[-\\w]+${comma + pc + cp}$)`,
       "i"
     ),
   },

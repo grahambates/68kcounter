@@ -41,6 +41,7 @@ describe("operandMode", () => {
 
   test("indirect displacement - old", () => {
     expect(operandMode("(1,a0)")).toEqual(AddressingModes.AnDisp);
+    expect(operandMode("(-1,a0)")).toEqual(AddressingModes.AnDisp);
     expect(operandMode("(  1,a0  )")).toEqual(AddressingModes.AnDisp);
   });
 
@@ -83,6 +84,7 @@ describe("operandMode", () => {
   test("indirect displacement", () => {
     expect(operandMode("1(pc)")).toEqual(AddressingModes.PcDisp);
     expect(operandMode("(1,pc)")).toEqual(AddressingModes.PcDisp);
+    expect(operandMode("(-1,pc)")).toEqual(AddressingModes.PcDisp);
     expect(operandMode("(  1,pc  )")).toEqual(AddressingModes.PcDisp);
   });
 

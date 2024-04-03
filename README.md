@@ -25,6 +25,8 @@ This will output each line prefixed with profile data in the following format:
 
 `[cycles]([reads]/[writes]) [size]`
 
+See `npx 68kcounter --help` for more options.
+
 ### VS Code extension
 
 Available as <a href="https://marketplace.visualstudio.com/items?itemName=gigabates.68kcounter">VS Code extension</a> to provide live annotations and totals.
