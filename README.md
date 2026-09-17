@@ -1,3 +1,7 @@
+> **This repository has moved.** Development continues in [grahambates/m68k-tools](https://github.com/grahambates/m68k-tools), under [`packages/68kcounter`](https://github.com/grahambates/m68k-tools/tree/main/packages/68kcounter). This repository is archived; please file issues and pull requests there instead.
+
+---
+
 ![Logo](images/icon.png)
 
 # 68k Counter
